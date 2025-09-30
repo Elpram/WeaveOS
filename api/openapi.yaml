@@ -1,12 +1,6 @@
-
----
-
-# `api/openapi.yaml` (starter)
-
-```yaml
 openapi: 3.0.3
 info:
-  title: Ritual OS API (MVP Starter)
+  title: Ritual OS API (MVP)
   version: 0.1.0
 servers:
   - url: http://localhost:3000
@@ -14,101 +8,346 @@ paths:
   /health:
     get:
       summary: Liveness probe
+      tags: [System]
+      operationId: getHealth
       responses:
-        '200': { description: OK }
-
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
   /rituals:
     post:
-      summary: Create ritual (supports lightweight/instant runs; optional pasted links as inputs)
+      summary: Create ritual
+      description: |
+        Creates a ritual. Supports lightweight rituals with optional instant runs and pasted link inputs.
+      tags: [Rituals]
+      operationId: createRitual
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRitualRequest'
       responses:
-        '201': { description: Created }
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateRitualResponse'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Ritual already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     get:
       summary: List rituals
+      tags: [Rituals]
+      operationId: listRituals
       responses:
-        '200': { description: OK }
-
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListRitualsResponse'
   /rituals/{ritual_id}:
     get:
-      summary: Get ritual by id
+      summary: Get ritual
+      tags: [Rituals]
+      operationId: getRitual
       parameters:
-        - in: path
-          name: ritual_id
-          required: true
-          schema: { type: string }
+        - $ref: '#/components/parameters/RitualId'
       responses:
-        '200': { description: OK }
-        '404': { description: Not found }
-
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetRitualResponse'
+        '404':
+          description: Ritual not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /rituals/{ritual_id}/runs:
     post:
-      summary: Create a run (instance). If `instant_runs=true`, the run may auto-start/complete.
+      summary: Create run
+      description: |
+        Creates a run for the ritual. When `instant_runs` is true the run may be auto-started/auto-completed in future enhancements.
+      tags: [Runs]
+      operationId: createRun
       parameters:
-        - in: path
-          name: ritual_id
-          required: true
-          schema: { type: string }
+        - $ref: '#/components/parameters/RitualId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRunRequest'
       responses:
-        '201': { description: Created }
-
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateRunResponse'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Ritual not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Run already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /runs/{run_id}:
     get:
-      summary: Get run by id
+      summary: Get run
+      description: Placeholder for future implementation.
+      tags: [Runs]
+      operationId: getRun
       parameters:
-        - in: path
-          name: run_id
-          required: true
-          schema: { type: string }
+        - $ref: '#/components/parameters/RunId'
       responses:
-        '200': { description: OK }
-        '404': { description: Not found }
-
+        '501':
+          description: Not implemented
   /runs/{run_id}/artifacts:
     get:
-      summary: List artifacts for a run
+      summary: List run artifacts
+      description: Placeholder for future implementation.
+      tags: [Artifacts]
+      operationId: listRunArtifacts
       parameters:
-        - in: path
-          name: run_id
-          required: true
-          schema: { type: string }
+        - $ref: '#/components/parameters/RunId'
       responses:
-        '200': { description: OK }
-
+        '501':
+          description: Not implemented
   /artifacts:
     post:
-      summary: Create artifact (context required: one of run|ritual|inbox)
+      summary: Create artifact
+      description: Placeholder for future implementation.
+      tags: [Artifacts]
+      operationId: createArtifact
       responses:
-        '201': { description: Created }
-        '400': { description: Invalid context }
-
+        '501':
+          description: Not implemented
   /attention:
     post:
-      summary: Create attention item (human-in-the-loop blocker)
+      summary: Create attention item
+      description: Placeholder for future implementation.
+      tags: [Attention]
+      operationId: createAttention
       responses:
-        '201': { description: Created }
-
+        '501':
+          description: Not implemented
   /runs/{run_id}/attention:
     get:
-      summary: List attention items for a run
+      summary: List run attention items
+      description: Placeholder for future implementation.
+      tags: [Attention]
+      operationId: listRunAttention
       parameters:
-        - in: path
-          name: run_id
-          required: true
-          schema: { type: string }
+        - $ref: '#/components/parameters/RunId'
       responses:
-        '200': { description: OK }
-
+        '501':
+          description: Not implemented
   /automations:
     post:
-      summary: Register an automation (trigger → capability call) — mock in MVP
+      summary: Register automation
+      description: Placeholder for future implementation.
+      tags: [Automations]
+      operationId: createAutomation
       responses:
-        '201': { description: Created }
-
+        '501':
+          description: Not implemented
   /invocations/request:
     post:
-      summary: Request an Invocation URL (or short-lived token) for a capability call — mock in MVP
+      summary: Request invocation URL
+      description: Placeholder for future implementation.
+      tags: [Automations]
+      operationId: requestInvocation
       responses:
-        '200': { description: OK }
-
+        '501':
+          description: Not implemented
 components:
-  # Keep schemas minimal at start; Codex can expand them per SPECS.md as endpoints are implemented.
-  schemas: {}
+  parameters:
+    RitualId:
+      in: path
+      name: ritual_id
+      required: true
+      schema:
+        type: string
+      description: Unique key for the ritual.
+    RunId:
+      in: path
+      name: run_id
+      required: true
+      schema:
+        type: string
+      description: Unique key for the run.
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          example: ok
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: Machine-readable error code.
+          example: ritual_not_found
+    RitualInput:
+      type: object
+      required: [type, value]
+      properties:
+        type:
+          type: string
+          enum: [external_link]
+        value:
+          type: string
+          description: URL pasted by the user.
+          example: https://city.local/trash
+        label:
+          type: string
+          description: Optional friendly name for the link.
+          example: City schedule
+    Run:
+      type: object
+      required:
+        - run_key
+        - ritual_key
+        - status
+        - created_at
+        - updated_at
+      properties:
+        run_key:
+          type: string
+          description: Identifier for the run. Defaults to an ISO timestamp when omitted.
+          example: 2024-05-18T07:00:00.000Z
+        ritual_key:
+          type: string
+          description: Key of the ritual this run belongs to.
+          example: trash-day
+        status:
+          type: string
+          enum: [planned, in_progress, complete]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    Ritual:
+      type: object
+      required:
+        - ritual_key
+        - name
+        - instant_runs
+        - inputs
+        - created_at
+        - updated_at
+        - runs
+      properties:
+        ritual_key:
+          type: string
+          example: trash-day
+        name:
+          type: string
+          example: Trash day pickup
+        instant_runs:
+          type: boolean
+        inputs:
+          type: array
+          items:
+            $ref: '#/components/schemas/RitualInput'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        runs:
+          type: array
+          description: Ordered from oldest to newest.
+          items:
+            $ref: '#/components/schemas/Run'
+    CreateRitualRequest:
+      type: object
+      required: [ritual_key, name]
+      properties:
+        ritual_key:
+          type: string
+          description: Short identifier for the ritual.
+          example: trash-day
+        name:
+          type: string
+          description: Human readable name for the ritual.
+          example: Trash day pickup
+        instant_runs:
+          type: boolean
+          description: Whether runs should be auto-started/auto-completed when created.
+          default: false
+        inputs:
+          type: array
+          description: Optional default inputs available to every run.
+          items:
+            $ref: '#/components/schemas/RitualInput'
+          default: []
+    CreateRitualResponse:
+      type: object
+      required: [ritual]
+      properties:
+        ritual:
+          $ref: '#/components/schemas/Ritual'
+    ListRitualsResponse:
+      type: object
+      required: [rituals]
+      properties:
+        rituals:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ritual'
+    GetRitualResponse:
+      type: object
+      required: [ritual]
+      properties:
+        ritual:
+          $ref: '#/components/schemas/Ritual'
+    CreateRunRequest:
+      type: object
+      properties:
+        run_key:
+          type: string
+          description: Custom run key. If omitted, a new ISO timestamp is used.
+      additionalProperties: false
+    CreateRunResponse:
+      type: object
+      required: [run]
+      properties:
+        run:
+          $ref: '#/components/schemas/Run'
