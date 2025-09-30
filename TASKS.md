@@ -31,9 +31,9 @@
 
 ## Phase 3 — Attention Items (human-in-the-loop)
 
-- [ ] Implement **POST /attention** and **GET /runs/{id}/attention**
+- [x] Implement **POST /attention** and **GET /runs/{id}/attention** — tests: `npm test`, `npm run e2e:smoke`; note: Added in-memory attention store and listing ([tests/integration/attention.test.js](tests/integration/attention.test.js))
   - **AC:** Prep/start logic can create an attention item (mock); list shows it.
-- [ ] Add `on_attention_resolved` event (mock implementation)
+- [x] Add `on_attention_resolved` event (mock implementation) — tests: `npm test`, `npm run e2e:smoke`; note: Resolving attention logs run activity ([tests/integration/attention.test.js](tests/integration/attention.test.js))
   - **AC:** Resolving an item triggers a log entry on the run.
 
 ## Phase 4 — Automations (mock)
