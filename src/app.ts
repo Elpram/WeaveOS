@@ -14,12 +14,54 @@ interface RitualInputExternalLink {
 
 type RitualInput = RitualInputExternalLink;
 
+type TriggerType =
+  | 'on_run_planned'
+  | 'before_run_start'
+  | 'on_run_start'
+  | 'on_artifact_published'
+  | 'on_run_complete'
+  | 'on_attention_resolved';
+
+interface AutomationCall {
+  capability_id: string;
+  payload_template: Record<string, unknown>;
+  connection_id?: string;
+  target_id?: string;
+}
+
+interface Automation {
+  automation_id: string;
+  ritual_key?: string;
+  trigger: TriggerType;
+  call: AutomationCall;
+  created_at: string;
+  updated_at: string;
+}
+
+interface AttentionItem {
+  attention_id: string;
+  run_key: string;
+  type: 'auth_needed' | 'missing_draft' | 'decision_required' | 'other';
+  message: string;
+  resolved: boolean;
+  created_at: string;
+  resolved_at?: string;
+}
+
+interface ActivityLogEntry {
+  timestamp: string;
+  event: string;
+  message: string;
+  metadata?: Record<string, unknown>;
+}
+
 interface RunRecord {
   run_key: string;
   ritual_key: string;
   status: RunStatus;
   created_at: string;
   updated_at: string;
+  activity_log: ActivityLogEntry[];
 }
 
 interface RitualRecord {
@@ -41,11 +83,15 @@ interface IncomingMessageWithBody extends IncomingMessage {
 interface AppState {
   rituals: Map<string, RitualRecord>;
   runs: Map<string, RunRecord>;
+  attentionItems: Map<string, AttentionItem>;
+  automations: Map<string, Automation>;
 }
 
 const createInitialState = (): AppState => ({
   rituals: new Map(),
   runs: new Map(),
+  attentionItems: new Map(),
+  automations: new Map(),
 });
 
 const sendJson = (response: ServerResponse, statusCode: number, payload: unknown): void => {
@@ -85,6 +131,7 @@ const normalizeRitualForResponse = (ritual: RitualRecord): RitualRecord => ({
     status: run.status,
     created_at: run.created_at,
     updated_at: run.updated_at,
+    activity_log: run.activity_log,
   })),
 });
 
@@ -273,6 +320,7 @@ const handleCreateRun = async (
     status: 'planned',
     created_at: createdAt.toISOString(),
     updated_at: createdAt.toISOString(),
+    activity_log: [],
   };
 
   if (ritual.instant_runs) {
@@ -285,6 +333,309 @@ const handleCreateRun = async (
   state.runs.set(runKey, run);
 
   sendJson(response, 201, { run });
+};
+
+const createAttentionId = (): string => `attn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+const handleCreateAttention = async (
+  state: AppState,
+  request: IncomingMessage,
+  response: ServerResponse,
+): Promise<void> => {
+  const rawBody = await readRequestBody(request);
+  let payload: unknown = {};
+
+  if (rawBody.length > 0) {
+    try {
+      payload = JSON.parse(rawBody);
+    } catch (_error) {
+      sendJson(response, 400, { error: 'invalid_json' });
+      return;
+    }
+  }
+
+  if (payload === null || typeof payload !== 'object') {
+    sendJson(response, 400, { error: 'invalid_payload' });
+    return;
+  }
+
+  const {
+    run_key: runKey,
+    type,
+    message,
+  } = payload as {
+    run_key?: unknown;
+    type?: unknown;
+    message?: unknown;
+  };
+
+  if (typeof runKey !== 'string' || runKey.trim().length === 0) {
+    sendJson(response, 400, { error: 'run_key_required' });
+    return;
+  }
+
+  if (!state.runs.has(runKey)) {
+    sendJson(response, 404, { error: 'run_not_found' });
+    return;
+  }
+
+  const validTypes = ['auth_needed', 'missing_draft', 'decision_required', 'other'];
+  if (typeof type !== 'string' || !validTypes.includes(type)) {
+    sendJson(response, 400, { error: 'invalid_attention_type' });
+    return;
+  }
+
+  if (typeof message !== 'string' || message.trim().length === 0) {
+    sendJson(response, 400, { error: 'message_required' });
+    return;
+  }
+
+  const timestamp = new Date().toISOString();
+  const attentionItem: AttentionItem = {
+    attention_id: createAttentionId(),
+    run_key: runKey,
+    type: type as AttentionItem['type'],
+    message,
+    resolved: false,
+    created_at: timestamp,
+  };
+
+  state.attentionItems.set(attentionItem.attention_id, attentionItem);
+
+  sendJson(response, 201, { attention: attentionItem });
+};
+
+const handleGetRunAttention = (
+  state: AppState,
+  response: ServerResponse,
+  runKey: string,
+): void => {
+  if (!state.runs.has(runKey)) {
+    sendJson(response, 404, { error: 'run_not_found' });
+    return;
+  }
+
+  const items = Array.from(state.attentionItems.values()).filter(
+    (item) => item.run_key === runKey,
+  );
+
+  sendJson(response, 200, { attention_items: items });
+};
+
+const handleResolveAttention = async (
+  state: AppState,
+  request: IncomingMessage,
+  response: ServerResponse,
+  attentionId: string,
+): Promise<void> => {
+  const attentionItem = state.attentionItems.get(attentionId);
+
+  if (!attentionItem) {
+    sendJson(response, 404, { error: 'attention_item_not_found' });
+    return;
+  }
+
+  if (attentionItem.resolved) {
+    sendJson(response, 409, { error: 'attention_already_resolved' });
+    return;
+  }
+
+  const run = state.runs.get(attentionItem.run_key);
+
+  if (!run) {
+    sendJson(response, 404, { error: 'run_not_found' });
+    return;
+  }
+
+  const timestamp = new Date().toISOString();
+  attentionItem.resolved = true;
+  attentionItem.resolved_at = timestamp;
+
+  run.activity_log.push({
+    timestamp,
+    event: 'on_attention_resolved',
+    message: `Attention item resolved: ${attentionItem.type}`,
+    metadata: {
+      attention_id: attentionItem.attention_id,
+      attention_type: attentionItem.type,
+      original_message: attentionItem.message,
+    },
+  });
+
+  run.updated_at = timestamp;
+
+  sendJson(response, 200, { attention: attentionItem });
+};
+
+const createAutomationId = (): string => `auto_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+const handleCreateAutomation = async (
+  state: AppState,
+  request: IncomingMessage,
+  response: ServerResponse,
+): Promise<void> => {
+  const rawBody = await readRequestBody(request);
+  let payload: unknown = {};
+
+  if (rawBody.length > 0) {
+    try {
+      payload = JSON.parse(rawBody);
+    } catch (_error) {
+      sendJson(response, 400, { error: 'invalid_json' });
+      return;
+    }
+  }
+
+  if (payload === null || typeof payload !== 'object') {
+    sendJson(response, 400, { error: 'invalid_payload' });
+    return;
+  }
+
+  const {
+    ritual_key: ritualKey,
+    trigger,
+    call,
+  } = payload as {
+    ritual_key?: unknown;
+    trigger?: unknown;
+    call?: unknown;
+  };
+
+  if (ritualKey !== undefined && (typeof ritualKey !== 'string' || ritualKey.trim().length === 0)) {
+    sendJson(response, 400, { error: 'ritual_key_must_be_string' });
+    return;
+  }
+
+  if (ritualKey && !state.rituals.has(ritualKey)) {
+    sendJson(response, 404, { error: 'ritual_not_found' });
+    return;
+  }
+
+  const validTriggers: TriggerType[] = [
+    'on_run_planned',
+    'before_run_start',
+    'on_run_start',
+    'on_artifact_published',
+    'on_run_complete',
+    'on_attention_resolved',
+  ];
+
+  if (typeof trigger !== 'string' || !validTriggers.includes(trigger as TriggerType)) {
+    sendJson(response, 400, { error: 'invalid_trigger_type' });
+    return;
+  }
+
+  if (!call || typeof call !== 'object') {
+    sendJson(response, 400, { error: 'call_required' });
+    return;
+  }
+
+  const {
+    capability_id: capabilityId,
+    payload_template: payloadTemplate,
+    connection_id: connectionId,
+    target_id: targetId,
+  } = call as {
+    capability_id?: unknown;
+    payload_template?: unknown;
+    connection_id?: unknown;
+    target_id?: unknown;
+  };
+
+  if (typeof capabilityId !== 'string' || capabilityId.trim().length === 0) {
+    sendJson(response, 400, { error: 'capability_id_required' });
+    return;
+  }
+
+  if (!payloadTemplate || typeof payloadTemplate !== 'object' || Array.isArray(payloadTemplate)) {
+    sendJson(response, 400, { error: 'payload_template_must_be_object' });
+    return;
+  }
+
+  if (connectionId !== undefined && (typeof connectionId !== 'string' || connectionId.trim().length === 0)) {
+    sendJson(response, 400, { error: 'connection_id_must_be_string' });
+    return;
+  }
+
+  if (targetId !== undefined && (typeof targetId !== 'string' || targetId.trim().length === 0)) {
+    sendJson(response, 400, { error: 'target_id_must_be_string' });
+    return;
+  }
+
+  const timestamp = new Date().toISOString();
+  const automation: Automation = {
+    automation_id: createAutomationId(),
+    ...(ritualKey ? { ritual_key: ritualKey } : {}),
+    trigger: trigger as TriggerType,
+    call: {
+      capability_id: capabilityId,
+      payload_template: payloadTemplate as Record<string, unknown>,
+      ...(connectionId ? { connection_id: connectionId } : {}),
+      ...(targetId ? { target_id: targetId } : {}),
+    },
+    created_at: timestamp,
+    updated_at: timestamp,
+  };
+
+  state.automations.set(automation.automation_id, automation);
+
+  sendJson(response, 201, { automation });
+};
+
+const createInvocationId = (): string => `inv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+const createIdempotencyKey = (): string => `idem_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+const handleRequestInvocation = async (
+  _state: AppState,
+  request: IncomingMessage,
+  response: ServerResponse,
+): Promise<void> => {
+  const rawBody = await readRequestBody(request);
+  let payload: unknown = {};
+
+  if (rawBody.length > 0) {
+    try {
+      payload = JSON.parse(rawBody);
+    } catch (_error) {
+      sendJson(response, 400, { error: 'invalid_json' });
+      return;
+    }
+  }
+
+  if (payload === null || typeof payload !== 'object') {
+    sendJson(response, 400, { error: 'invalid_payload' });
+    return;
+  }
+
+  const {
+    capability_id: capabilityId,
+    payload: invocationPayload,
+  } = payload as {
+    capability_id?: unknown;
+    payload?: unknown;
+  };
+
+  if (typeof capabilityId !== 'string' || capabilityId.trim().length === 0) {
+    sendJson(response, 400, { error: 'capability_id_required' });
+    return;
+  }
+
+  if (!invocationPayload || typeof invocationPayload !== 'object') {
+    sendJson(response, 400, { error: 'payload_must_be_object' });
+    return;
+  }
+
+  const invocationId = createInvocationId();
+  const idempotencyKey = createIdempotencyKey();
+  const mockInvocationUrl = `https://api.example.com/v1/invocations/${invocationId}`;
+
+  sendJson(response, 200, {
+    invocation_id: invocationId,
+    invocation_url: mockInvocationUrl,
+    idempotency_key: idempotencyKey,
+    capability_id: capabilityId,
+    status: 'pending',
+  });
 };
 
 const handleRequest = async (
@@ -325,6 +676,41 @@ const handleRequest = async (
     if (segments.length === 3 && segments[2] === 'runs' && method === 'POST') {
       const ritualKey = segments[1];
       await handleCreateRun(state, request, response, ritualKey);
+      return;
+    }
+  }
+
+  if (segments.length > 0 && segments[0] === 'attention') {
+    if (method === 'POST' && segments.length === 1) {
+      await handleCreateAttention(state, request, response);
+      return;
+    }
+
+    if (method === 'POST' && segments.length === 3 && segments[2] === 'resolve') {
+      const attentionId = segments[1];
+      await handleResolveAttention(state, request, response, attentionId);
+      return;
+    }
+  }
+
+  if (segments.length > 0 && segments[0] === 'runs') {
+    if (segments.length === 3 && segments[2] === 'attention' && method === 'GET') {
+      const runKey = segments[1];
+      handleGetRunAttention(state, response, runKey);
+      return;
+    }
+  }
+
+  if (segments.length > 0 && segments[0] === 'automations') {
+    if (method === 'POST' && segments.length === 1) {
+      await handleCreateAutomation(state, request, response);
+      return;
+    }
+  }
+
+  if (segments.length > 0 && segments[0] === 'invocations') {
+    if (method === 'POST' && segments.length === 2 && segments[1] === 'request') {
+      await handleRequestInvocation(state, request, response);
       return;
     }
   }
