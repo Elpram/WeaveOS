@@ -13,7 +13,8 @@
 
 - [ ] Create `api/openapi.yaml` with MVP endpoints listed in SPECS.md.
   - **AC:** File exists; paths compile with an OpenAPI linter.
-- [ ] Implement **/rituals**: `POST`, `GET`, `GET/{id}`
+- [x] Implement **/rituals**: `POST`, `GET`, `GET/{id}` — tests: `npm test`
+  - Completed: Added in-memory ritual store with create/list/get handlers and integration coverage.
   - **AC:** Can create and list rituals with `ritual_key`, `name`, `instant_runs`.
 - [ ] Implement **/rituals/{id}/runs**: `POST`
   - **AC:** Returns a run with `run_key` defaulting to ISO date.
