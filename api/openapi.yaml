@@ -154,23 +154,82 @@ paths:
   /attention:
     post:
       summary: Create attention item
-      description: Placeholder for future implementation.
+      description: Create an in-memory attention item for a run.
       tags: [Attention]
       operationId: createAttention
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAttentionRequest'
       responses:
-        '501':
-          description: Not implemented
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateAttentionResponse'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Run not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /runs/{run_id}/attention:
     get:
       summary: List run attention items
-      description: Placeholder for future implementation.
+      description: List attention items associated with a run.
       tags: [Attention]
       operationId: listRunAttention
       parameters:
         - $ref: '#/components/parameters/RunId'
       responses:
-        '501':
-          description: Not implemented
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListRunAttentionResponse'
+        '404':
+          description: Run not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /attention/{attention_id}/resolve:
+    post:
+      summary: Resolve attention item
+      description: Resolve an attention item and log the resolution on the parent run.
+      tags: [Attention]
+      operationId: resolveAttention
+      parameters:
+        - $ref: '#/components/parameters/AttentionId'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolveAttentionResponse'
+        '404':
+          description: Attention item or run not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Attention item already resolved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /automations:
     post:
       summary: Register automation
@@ -198,6 +257,13 @@ components:
       schema:
         type: string
       description: Unique key for the ritual.
+    AttentionId:
+      in: path
+      name: attention_id
+      required: true
+      schema:
+        type: string
+      description: Unique identifier for the attention item.
     RunId:
       in: path
       name: run_id
@@ -245,6 +311,7 @@ components:
         - created_at
         - updated_at
         - inputs
+        - activity_log
       properties:
         run_key:
           type: string
@@ -268,6 +335,11 @@ components:
           description: Inputs available to this run, inherited from the parent ritual.
           items:
             $ref: '#/components/schemas/RitualInput'
+        activity_log:
+          type: array
+          description: Timeline of notable run events.
+          items:
+            $ref: '#/components/schemas/ActivityLogEntry'
     Ritual:
       type: object
       required:
@@ -357,3 +429,85 @@ components:
       properties:
         run:
           $ref: '#/components/schemas/Run'
+    ActivityLogEntry:
+      type: object
+      required:
+        - timestamp
+        - event
+        - message
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        event:
+          type: string
+          description: Machine-readable event name.
+          example: on_attention_resolved
+        message:
+          type: string
+          description: Human readable summary of the event.
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: {}
+    AttentionItem:
+      type: object
+      required:
+        - attention_id
+        - run_key
+        - type
+        - message
+        - resolved
+        - created_at
+      properties:
+        attention_id:
+          type: string
+          example: attn_1716111967_abcd12345
+        run_key:
+          type: string
+        type:
+          type: string
+          enum: [auth_needed, missing_draft, decision_required, other]
+        message:
+          type: string
+        resolved:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        resolved_at:
+          type: string
+          format: date-time
+          nullable: true
+    CreateAttentionRequest:
+      type: object
+      required: [run_key, type, message]
+      additionalProperties: false
+      properties:
+        run_key:
+          type: string
+        type:
+          type: string
+          enum: [auth_needed, missing_draft, decision_required, other]
+        message:
+          type: string
+    CreateAttentionResponse:
+      type: object
+      required: [attention]
+      properties:
+        attention:
+          $ref: '#/components/schemas/AttentionItem'
+    ListRunAttentionResponse:
+      type: object
+      required: [attention_items]
+      properties:
+        attention_items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttentionItem'
+    ResolveAttentionResponse:
+      type: object
+      required: [attention]
+      properties:
+        attention:
+          $ref: '#/components/schemas/AttentionItem'
