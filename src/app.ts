@@ -266,16 +266,21 @@ const handleCreateRun = async (
     return;
   }
 
-  const timestamp = new Date().toISOString();
+  const createdAt = new Date();
   const run: RunRecord = {
     run_key: runKey,
     ritual_key: ritual.ritual_key,
     status: 'planned',
-    created_at: timestamp,
-    updated_at: timestamp,
+    created_at: createdAt.toISOString(),
+    updated_at: createdAt.toISOString(),
   };
 
-  ritual.updated_at = timestamp;
+  if (ritual.instant_runs) {
+    run.status = 'complete';
+    run.updated_at = new Date().toISOString();
+  }
+
+  ritual.updated_at = run.updated_at;
   ritual.runs.push(run);
   state.runs.set(runKey, run);
 
