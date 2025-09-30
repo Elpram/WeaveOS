@@ -38,9 +38,11 @@
 
 ## Phase 4 — Automations (mock)
 
-- [ ] **POST /automations** to register an automation stub
+- [x] **POST /automations** to register an automation stub — tests: `npm test`, `npm run e2e:smoke`
+  - Completed: Endpoint now validates input, stores automations in-memory, and documents contract in OpenAPI.
   - **AC:** Store `trigger`, `call{capability_id, payload_template, (optional) connection_id/target_id}`
-- [ ] **POST /invocations/request** returns a mock invocation URL + idempotency key
+- [x] **POST /invocations/request** returns a mock invocation URL + idempotency key — tests: `npm test`, `npm run e2e:smoke`
+  - Completed: Endpoint issues mock invocation/idempotency identifiers and is documented in OpenAPI.
   - **AC:** E2E can pretend to “call a capability” by logging the URL.
 
 ## Phase 5 — Minimal UI (no build tools required)

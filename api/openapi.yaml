@@ -233,21 +233,63 @@ paths:
   /automations:
     post:
       summary: Register automation
-      description: Placeholder for future implementation.
+      description: |-
+        Registers an automation that can respond to a trigger. Automations may be scoped to a
+        specific ritual or apply globally when no `ritual_key` is provided.
       tags: [Automations]
       operationId: createAutomation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAutomationRequest'
       responses:
-        '501':
-          description: Not implemented
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateAutomationResponse'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Ritual not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /invocations/request:
     post:
       summary: Request invocation URL
-      description: Placeholder for future implementation.
+      description: |-
+        Requests a mock invocation URL for a capability call. Returns an invocation identifier and
+        idempotency key that client code can log or re-use for retries.
       tags: [Automations]
       operationId: requestInvocation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvocationRequest'
       responses:
-        '501':
-          description: Not implemented
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvocationResponse'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
   parameters:
     RitualId:
@@ -511,3 +553,120 @@ components:
       properties:
         attention:
           $ref: '#/components/schemas/AttentionItem'
+    AutomationCall:
+      type: object
+      required: [capability_id, payload_template]
+      additionalProperties: false
+      properties:
+        capability_id:
+          type: string
+          description: Capability identifier to invoke.
+          example: notify.send
+        payload_template:
+          type: object
+          description: Template payload forwarded to the capability.
+          additionalProperties: {}
+        connection_id:
+          type: string
+          description: Optional connection identifier when the automation is bound to a connection.
+        target_id:
+          type: string
+          description: Optional target identifier within the connection.
+    Automation:
+      type: object
+      required:
+        - automation_id
+        - trigger
+        - call
+        - created_at
+        - updated_at
+      properties:
+        automation_id:
+          type: string
+          example: auto_1716111967_abcd12345
+        ritual_key:
+          type: string
+          description: Optional ritual scope for the automation.
+        trigger:
+          type: string
+          description: Trigger that activates the automation.
+          enum:
+            - on_run_planned
+            - before_run_start
+            - on_run_start
+            - on_artifact_published
+            - on_run_complete
+            - on_attention_resolved
+        call:
+          $ref: '#/components/schemas/AutomationCall'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    CreateAutomationRequest:
+      type: object
+      required: [trigger, call]
+      additionalProperties: false
+      properties:
+        ritual_key:
+          type: string
+          description: Optional ritual to scope the automation to.
+        trigger:
+          type: string
+          description: Trigger that activates the automation.
+          enum:
+            - on_run_planned
+            - before_run_start
+            - on_run_start
+            - on_artifact_published
+            - on_run_complete
+            - on_attention_resolved
+        call:
+          $ref: '#/components/schemas/AutomationCall'
+    CreateAutomationResponse:
+      type: object
+      required: [automation]
+      properties:
+        automation:
+          $ref: '#/components/schemas/Automation'
+    InvocationRequest:
+      type: object
+      required: [capability_id, payload]
+      additionalProperties: false
+      properties:
+        capability_id:
+          type: string
+          description: Capability identifier being invoked.
+          example: roomba.start
+        payload:
+          type: object
+          description: Arbitrary payload forwarded to the capability.
+          additionalProperties: {}
+    InvocationResponse:
+      type: object
+      required:
+        - invocation_id
+        - invocation_url
+        - idempotency_key
+        - capability_id
+        - status
+      properties:
+        invocation_id:
+          type: string
+          example: inv_1716111967_abcd12345
+        invocation_url:
+          type: string
+          format: uri
+          example: https://api.example.com/v1/invocations/inv_1716111967_abcd12345
+        idempotency_key:
+          type: string
+          example: idem_1716111967_abcd12345
+        capability_id:
+          type: string
+          description: Echoed capability identifier.
+        status:
+          type: string
+          description: Current invocation status.
+          example: pending
