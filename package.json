@@ -10,7 +10,7 @@
     "start": "node dist/server.js",
     "test": "npm run build && node --test tests/**/*.test.js",
     "e2e:smoke": "npm run build && node --test tests/e2e",
-    "lint": "eslint .",
+    "lint": "npm run build && eslint --ext .js dist tests",
     "fmt": "prettier --write .",
     "typecheck": "tsc --noEmit"
   },
@@ -19,5 +19,8 @@
   },
   "license": "MIT",
   "dependencies": {},
-  "devDependencies": {}
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "prettier": "^3.3.2"
+  }
 }
