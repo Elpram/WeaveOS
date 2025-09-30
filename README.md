@@ -27,13 +27,13 @@ npm run lint && npm run fmt
 
 If a command is missing, implement it and update AGENTS.md.
 
-##Minimal UI (planned)
+## Minimal UI (planned)
 
 - Home: single-line ritual creator (parse: name, cadence phrase, optional link); Upcoming; Needs Attention
 - Ritual page: cadence badge, instant-runs badge, default inputs (pasted links), recent runs, “Create run now”
 - Run mini-hub: status, next triggers, activity log, attention items (resolve/snooze), “Retry” chip
 
-##Contribution flow
+## Contribution flow
 
 - Pick an item from TASKS.md
 - Implement + tests green
