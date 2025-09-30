@@ -1,0 +1,114 @@
+
+---
+
+# `api/openapi.yaml` (starter)
+
+```yaml
+openapi: 3.0.3
+info:
+  title: Ritual OS API (MVP Starter)
+  version: 0.1.0
+servers:
+  - url: http://localhost:3000
+paths:
+  /health:
+    get:
+      summary: Liveness probe
+      responses:
+        '200': { description: OK }
+
+  /rituals:
+    post:
+      summary: Create ritual (supports lightweight/instant runs; optional pasted links as inputs)
+      responses:
+        '201': { description: Created }
+    get:
+      summary: List rituals
+      responses:
+        '200': { description: OK }
+
+  /rituals/{ritual_id}:
+    get:
+      summary: Get ritual by id
+      parameters:
+        - in: path
+          name: ritual_id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+        '404': { description: Not found }
+
+  /rituals/{ritual_id}/runs:
+    post:
+      summary: Create a run (instance). If `instant_runs=true`, the run may auto-start/complete.
+      parameters:
+        - in: path
+          name: ritual_id
+          required: true
+          schema: { type: string }
+      responses:
+        '201': { description: Created }
+
+  /runs/{run_id}:
+    get:
+      summary: Get run by id
+      parameters:
+        - in: path
+          name: run_id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+        '404': { description: Not found }
+
+  /runs/{run_id}/artifacts:
+    get:
+      summary: List artifacts for a run
+      parameters:
+        - in: path
+          name: run_id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+
+  /artifacts:
+    post:
+      summary: Create artifact (context required: one of run|ritual|inbox)
+      responses:
+        '201': { description: Created }
+        '400': { description: Invalid context }
+
+  /attention:
+    post:
+      summary: Create attention item (human-in-the-loop blocker)
+      responses:
+        '201': { description: Created }
+
+  /runs/{run_id}/attention:
+    get:
+      summary: List attention items for a run
+      parameters:
+        - in: path
+          name: run_id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+
+  /automations:
+    post:
+      summary: Register an automation (trigger → capability call) — mock in MVP
+      responses:
+        '201': { description: Created }
+
+  /invocations/request:
+    post:
+      summary: Request an Invocation URL (or short-lived token) for a capability call — mock in MVP
+      responses:
+        '200': { description: OK }
+
+components:
+  # Keep schemas minimal at start; Codex can expand them per SPECS.md as endpoints are implemented.
+  schemas: {}
