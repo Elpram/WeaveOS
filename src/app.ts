@@ -4,28 +4,335 @@ export interface AppOptions {
   logger?: boolean;
 }
 
+type RunStatus = 'planned' | 'in_progress' | 'complete';
+
+interface RitualInputExternalLink {
+  type: 'external_link';
+  value: string;
+  label?: string;
+}
+
+type RitualInput = RitualInputExternalLink;
+
+interface RunRecord {
+  run_key: string;
+  ritual_key: string;
+  status: RunStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+interface RitualRecord {
+  ritual_key: string;
+  name: string;
+  instant_runs: boolean;
+  inputs: RitualInput[];
+  created_at: string;
+  updated_at: string;
+  runs: RunRecord[];
+}
+
+interface IncomingMessageWithBody extends IncomingMessage {
+  on(event: 'data', listener: (chunk: string | { toString(encoding?: string): string }) => void): this;
+  on(event: 'end', listener: () => void): this;
+  on(event: 'error', listener: (error: Error) => void): this;
+}
+
+interface AppState {
+  rituals: Map<string, RitualRecord>;
+  runs: Map<string, RunRecord>;
+}
+
+const createInitialState = (): AppState => ({
+  rituals: new Map(),
+  runs: new Map(),
+});
+
 const sendJson = (response: ServerResponse, statusCode: number, payload: unknown): void => {
   response.statusCode = statusCode;
   response.setHeader('content-type', 'application/json');
   response.end(JSON.stringify(payload));
 };
 
-const handleRequest = (request: IncomingMessage, response: ServerResponse): void => {
-  const method = (request.method ?? 'GET').toUpperCase();
-  const url = request.url ?? '/';
+const readRequestBody = (request: IncomingMessage): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const source = request as IncomingMessageWithBody;
+    const chunks: string[] = [];
 
-  if (method === 'GET' && url === '/health') {
+    source.on('data', (chunk) => {
+      if (typeof chunk === 'string') {
+        chunks.push(chunk);
+        return;
+      }
+
+      if (chunk && typeof chunk.toString === 'function') {
+        chunks.push(chunk.toString());
+      }
+    });
+
+    source.on('end', () => {
+      resolve(chunks.join(''));
+    });
+
+    source.on('error', reject);
+  });
+
+const normalizeRitualForResponse = (ritual: RitualRecord): RitualRecord => ({
+  ...ritual,
+  runs: ritual.runs.map((run) => ({
+    run_key: run.run_key,
+    ritual_key: run.ritual_key,
+    status: run.status,
+    created_at: run.created_at,
+    updated_at: run.updated_at,
+  })),
+});
+
+const handleCreateRitual = async (
+  state: AppState,
+  request: IncomingMessage,
+  response: ServerResponse,
+): Promise<void> => {
+  const rawBody = await readRequestBody(request);
+  let payload: unknown = {};
+
+  if (rawBody.length > 0) {
+    try {
+      payload = JSON.parse(rawBody);
+    } catch (_error) {
+      sendJson(response, 400, { error: 'invalid_json' });
+      return;
+    }
+  }
+
+  if (payload === null || typeof payload !== 'object') {
+    sendJson(response, 400, { error: 'invalid_payload' });
+    return;
+  }
+
+  const {
+    ritual_key: ritualKey,
+    name,
+    instant_runs: instantRuns = false,
+    inputs = [],
+  } = payload as {
+    ritual_key?: unknown;
+    name?: unknown;
+    instant_runs?: unknown;
+    inputs?: unknown;
+  };
+
+  if (typeof ritualKey !== 'string' || ritualKey.trim().length === 0) {
+    sendJson(response, 400, { error: 'ritual_key_required' });
+    return;
+  }
+
+  if (typeof name !== 'string' || name.trim().length === 0) {
+    sendJson(response, 400, { error: 'name_required' });
+    return;
+  }
+
+  if (typeof instantRuns !== 'boolean') {
+    sendJson(response, 400, { error: 'instant_runs_must_be_boolean' });
+    return;
+  }
+
+  if (!Array.isArray(inputs)) {
+    sendJson(response, 400, { error: 'inputs_must_be_array' });
+    return;
+  }
+
+  if (state.rituals.has(ritualKey)) {
+    sendJson(response, 409, { error: 'ritual_already_exists' });
+    return;
+  }
+
+  const normalizedInputs: RitualInput[] = [];
+  for (const input of inputs) {
+    if (!input || typeof input !== 'object') {
+      sendJson(response, 400, { error: 'invalid_input_entry' });
+      return;
+    }
+
+    const { type, value, label } = input as {
+      type?: unknown;
+      value?: unknown;
+      label?: unknown;
+    };
+
+    if (type !== 'external_link') {
+      sendJson(response, 400, { error: 'unsupported_input_type' });
+      return;
+    }
+
+    if (typeof value !== 'string' || value.trim().length === 0) {
+      sendJson(response, 400, { error: 'input_value_required' });
+      return;
+    }
+
+    if (label !== undefined && typeof label !== 'string') {
+      sendJson(response, 400, { error: 'input_label_must_be_string' });
+      return;
+    }
+
+    normalizedInputs.push({
+      type,
+      value,
+      ...(label ? { label } : {}),
+    });
+  }
+
+  const timestamp = new Date().toISOString();
+  const ritual: RitualRecord = {
+    ritual_key: ritualKey,
+    name,
+    instant_runs: instantRuns,
+    inputs: normalizedInputs,
+    created_at: timestamp,
+    updated_at: timestamp,
+    runs: [],
+  };
+
+  state.rituals.set(ritualKey, ritual);
+
+  sendJson(response, 201, { ritual: normalizeRitualForResponse(ritual) });
+};
+
+const handleListRituals = (state: AppState, response: ServerResponse): void => {
+  const rituals = Array.from(state.rituals.values()).map((ritual) =>
+    normalizeRitualForResponse(ritual),
+  );
+  sendJson(response, 200, { rituals });
+};
+
+const handleGetRitual = (
+  state: AppState,
+  response: ServerResponse,
+  ritualKey: string,
+): void => {
+  const ritual = state.rituals.get(ritualKey);
+
+  if (!ritual) {
+    sendJson(response, 404, { error: 'ritual_not_found' });
+    return;
+  }
+
+  sendJson(response, 200, { ritual: normalizeRitualForResponse(ritual) });
+};
+
+const createRunKey = (): string => new Date().toISOString();
+
+const handleCreateRun = async (
+  state: AppState,
+  request: IncomingMessage,
+  response: ServerResponse,
+  ritualKey: string,
+): Promise<void> => {
+  const ritual = state.rituals.get(ritualKey);
+
+  if (!ritual) {
+    sendJson(response, 404, { error: 'ritual_not_found' });
+    return;
+  }
+
+  const rawBody = await readRequestBody(request);
+  let payload: unknown = {};
+
+  if (rawBody.length > 0) {
+    try {
+      payload = JSON.parse(rawBody);
+    } catch (_error) {
+      sendJson(response, 400, { error: 'invalid_json' });
+      return;
+    }
+  }
+
+  if (payload !== null && typeof payload !== 'object') {
+    sendJson(response, 400, { error: 'invalid_payload' });
+    return;
+  }
+
+  const { run_key: providedRunKey } = (payload ?? {}) as { run_key?: unknown };
+
+  if (providedRunKey !== undefined && (typeof providedRunKey !== 'string' || providedRunKey.trim().length === 0)) {
+    sendJson(response, 400, { error: 'run_key_must_be_string' });
+    return;
+  }
+
+  const runKey = providedRunKey ?? createRunKey();
+
+  if (state.runs.has(runKey)) {
+    sendJson(response, 409, { error: 'run_already_exists' });
+    return;
+  }
+
+  const timestamp = new Date().toISOString();
+  const run: RunRecord = {
+    run_key: runKey,
+    ritual_key: ritual.ritual_key,
+    status: 'planned',
+    created_at: timestamp,
+    updated_at: timestamp,
+  };
+
+  ritual.updated_at = timestamp;
+  ritual.runs.push(run);
+  state.runs.set(runKey, run);
+
+  sendJson(response, 201, { run });
+};
+
+const handleRequest = async (
+  state: AppState,
+  request: IncomingMessage,
+  response: ServerResponse,
+): Promise<void> => {
+  const method = (request.method ?? 'GET').toUpperCase();
+  const requestUrl = request.url ?? '/';
+  const [path] = requestUrl.split('?');
+  const segments = path.split('/').filter((segment) => segment.length > 0);
+
+  if (method === 'GET' && segments.length === 1 && segments[0] === 'health') {
     sendJson(response, 200, { status: 'ok' });
     return;
+  }
+
+  if (segments.length > 0 && segments[0] === 'rituals') {
+    if (method === 'POST' && segments.length === 1) {
+      await handleCreateRitual(state, request, response);
+      return;
+    }
+
+    if (method === 'GET' && segments.length === 1) {
+      handleListRituals(state, response);
+      return;
+    }
+
+    if (segments.length === 2) {
+      const ritualKey = segments[1];
+
+      if (method === 'GET') {
+        handleGetRitual(state, response, ritualKey);
+        return;
+      }
+    }
+
+    if (segments.length === 3 && segments[2] === 'runs' && method === 'POST') {
+      const ritualKey = segments[1];
+      await handleCreateRun(state, request, response, ritualKey);
+      return;
+    }
   }
 
   sendJson(response, 404, { status: 'not_found' });
 };
 
 export const createAppServer = (_options: AppOptions = {}): Server => {
-  const server = createServer((request, response) => {
+  const state = createInitialState();
+
+  const server = createServer(async (request, response) => {
     try {
-      handleRequest(request, response);
+      await handleRequest(state, request, response);
     } catch (_error) {
       sendJson(response, 500, { status: 'error' });
     }
