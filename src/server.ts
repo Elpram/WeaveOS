@@ -9,7 +9,12 @@ const host = process.env.HOST ?? DEFAULT_HOST;
 const server = createAppServer();
 
 server.listen({ port, host }, () => {
-  console.log({ event: 'server.start', entity: 'server', status: 'listening', meta: { port, host } });
+  console.log({
+    event: 'server.start',
+    entity: 'server',
+    status: 'listening',
+    meta: { port, host },
+  });
 });
 
 server.on('error', (error) => {

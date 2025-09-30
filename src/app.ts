@@ -26,7 +26,7 @@ export const createAppServer = (_options: AppOptions = {}): Server => {
   const server = createServer((request, response) => {
     try {
       handleRequest(request, response);
-    } catch (error) {
+    } catch (_error) {
       sendJson(response, 500, { status: 'error' });
     }
   });
