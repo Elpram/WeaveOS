@@ -1,0 +1,23 @@
+{
+  "name": "weaveos",
+  "version": "0.1.0",
+  "description": "WeaveOS API and minimal runtime",
+  "type": "commonjs",
+  "scripts": {
+    "bootstrap": "npm install",
+    "build": "tsc --project tsconfig.build.json",
+    "dev": "npm run build && node dist/server.js",
+    "start": "node dist/server.js",
+    "test": "npm run build && node --test tests/**/*.test.js",
+    "e2e:smoke": "npm run build && node --test tests/e2e",
+    "lint": "eslint .",
+    "fmt": "prettier --write .",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {}
+}

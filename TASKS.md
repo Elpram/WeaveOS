@@ -3,7 +3,7 @@
 > Each task should result in runnable commands and/or visible UI changes. Keep PRs small.
 
 ## Phase 0 — Repo hygiene
-- [ ] Add package scripts (`bootstrap`, `dev`, `start`, `test`, `e2e:smoke`, `lint`, `fmt`, `typecheck`)
+- [x] Add package scripts (`bootstrap`, `dev`, `start`, `test`, `e2e:smoke`, `lint`, `fmt`, `typecheck`) — tests: `npm test`, `npm run e2e:smoke`
   - **AC:** `npm run dev` starts an HTTP server with `/health`; `npm test` runs a dummy test.
 - [ ] Add lint/format config and ensure they run.
   - **AC:** `npm run lint` and `npm run fmt` succeed.
