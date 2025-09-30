@@ -17,14 +17,12 @@
 - [x] Implement **/rituals**: `POST`, `GET`, `GET/{id}` — tests: `npm test`
   - Completed: Added in-memory ritual store with create/list/get handlers and integration coverage.
   - **AC:** Can create and list rituals with `ritual_key`, `name`, `instant_runs`.
-- [x] Implement **/rituals/{id}/runs**: `POST`
-  - Completed: Added run creation handler with ISO `run_key` default and coverage via integration tests. — tests: `npm test`, `npm run e2e:smoke`
+- [ ] Implement **/rituals/{id}/runs**: `POST`
   - **AC:** Returns a run with `run_key` defaulting to ISO date.
 
 ## Phase 2 — Lightweight rituals & instant runs
 
-- [x] Add `instant_runs` semantics
-  - Completed: Instant rituals now auto-complete runs while scheduled rituals remain planned until progressed. — tests: `npm test`, `npm run e2e:smoke`
+- [ ] Add `instant_runs` semantics
   - **AC:** If `instant_runs=true`, creating a run auto-starts and auto-completes unless blocked.
 - [ ] Add _pasted link_ support as a run/ritual **input** (Unresolved Target)
   - **AC:** Rituals accept a list of `external_link` inputs; runs inherit them.
