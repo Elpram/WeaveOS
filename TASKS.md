@@ -26,8 +26,8 @@
 - [x] Add `instant_runs` semantics
   - Completed: Instant rituals now auto-complete runs while scheduled rituals remain planned until progressed. — tests: `npm test`, `npm run e2e:smoke`
   - **AC:** If `instant_runs=true`, creating a run auto-starts and auto-completes unless blocked.
-- [ ] Add _pasted link_ support as a run/ritual **input** (Unresolved Target)
-  - **AC:** Rituals accept a list of `external_link` inputs; runs inherit them.
+- [x] Add _pasted link_ support as a run/ritual **input** (Unresolved Target)
+  - Completed: Runs now inherit ritual `external_link` inputs and expose them via the API. — tests: `npm test`, `npm run e2e:smoke`
 
 ## Phase 3 — Attention Items (human-in-the-loop)
 

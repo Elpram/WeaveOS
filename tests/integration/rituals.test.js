@@ -96,6 +96,7 @@ test('instant rituals auto-complete runs immediately', async () => {
     assert.ok(isIsoDateString(runPayload.run.run_key));
     assert.ok(isIsoDateString(runPayload.run.created_at));
     assert.ok(isIsoDateString(runPayload.run.updated_at));
+    assert.deepEqual(runPayload.run.inputs, ritualRequestBody.inputs);
     assert.ok(
       Date.parse(runPayload.run.updated_at) >= Date.parse(runPayload.run.created_at),
       'completed runs should not have an updated_at before created_at',
@@ -107,6 +108,7 @@ test('instant rituals auto-complete runs immediately', async () => {
     assert.equal(ritualAfterRunPayload.ritual.runs.length, 1);
     assert.equal(ritualAfterRunPayload.ritual.runs[0].status, 'complete');
     assert.equal(ritualAfterRunPayload.ritual.runs[0].run_key, runPayload.run.run_key);
+    assert.deepEqual(ritualAfterRunPayload.ritual.runs[0].inputs, ritualRequestBody.inputs);
   } finally {
     await close(server);
   }
@@ -144,12 +146,14 @@ test('non-instant rituals create planned runs', async () => {
     assert.ok(isIsoDateString(runPayload.run.created_at));
     assert.ok(isIsoDateString(runPayload.run.updated_at));
     assert.equal(runPayload.run.created_at, runPayload.run.updated_at);
+    assert.deepEqual(runPayload.run.inputs, []);
 
     const ritualAfterRunResponse = await fetch(`${baseUrl}/rituals/${ritualRequestBody.ritual_key}`);
     assert.equal(ritualAfterRunResponse.status, 200);
     const ritualAfterRunPayload = await ritualAfterRunResponse.json();
     assert.equal(ritualAfterRunPayload.ritual.runs.length, 1);
     assert.equal(ritualAfterRunPayload.ritual.runs[0].status, 'planned');
+    assert.deepEqual(ritualAfterRunPayload.ritual.runs[0].inputs, []);
   } finally {
     await close(server);
   }

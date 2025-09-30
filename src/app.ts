@@ -62,6 +62,7 @@ interface RunRecord {
   created_at: string;
   updated_at: string;
   activity_log: ActivityLogEntry[];
+  inputs: RitualInput[];
 }
 
 interface RitualRecord {
@@ -132,6 +133,7 @@ const normalizeRitualForResponse = (ritual: RitualRecord): RitualRecord => ({
     created_at: run.created_at,
     updated_at: run.updated_at,
     activity_log: run.activity_log,
+    inputs: run.inputs.map((input) => ({ ...input })),
   })),
 });
 
@@ -321,6 +323,7 @@ const handleCreateRun = async (
     created_at: createdAt.toISOString(),
     updated_at: createdAt.toISOString(),
     activity_log: [],
+    inputs: ritual.inputs.map((input) => ({ ...input })),
   };
 
   if (ritual.instant_runs) {
@@ -332,7 +335,12 @@ const handleCreateRun = async (
   ritual.runs.push(run);
   state.runs.set(runKey, run);
 
-  sendJson(response, 201, { run });
+  sendJson(response, 201, {
+    run: {
+      ...run,
+      inputs: run.inputs.map((input) => ({ ...input })),
+    },
+  });
 };
 
 const createAttentionId = (): string => `attn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;

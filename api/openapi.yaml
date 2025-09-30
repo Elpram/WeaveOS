@@ -244,6 +244,7 @@ components:
         - status
         - created_at
         - updated_at
+        - inputs
       properties:
         run_key:
           type: string
@@ -262,6 +263,11 @@ components:
         updated_at:
           type: string
           format: date-time
+        inputs:
+          type: array
+          description: Inputs available to this run, inherited from the parent ritual.
+          items:
+            $ref: '#/components/schemas/RitualInput'
     Ritual:
       type: object
       required:
