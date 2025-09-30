@@ -11,7 +11,8 @@
 
 ## Phase 1 — API skeleton (in-memory)
 
-- [ ] Create `api/openapi.yaml` with MVP endpoints listed in SPECS.md.
+- [x] Create `api/openapi.yaml` with MVP endpoints listed in SPECS.md.
+  - Completed: Replaced the placeholder with a valid OpenAPI 3.0.3 spec for implemented ritual/run endpoints and documented placeholders for upcoming ones.
   - **AC:** File exists; paths compile with an OpenAPI linter.
 - [x] Implement **/rituals**: `POST`, `GET`, `GET/{id}` — tests: `npm test`
   - Completed: Added in-memory ritual store with create/list/get handlers and integration coverage.
