@@ -42,3 +42,7 @@ This repo is optimized for agentic development (Codex or similar). Follow this c
 - Small, composable modules; pure funcs where possible.
 - Idempotency for any action that could be retried.
 - Log structure: `{event, entity, id, status, meta}`.
+
+## OpenAPI parity notes
+
+- `GET /runs/{run_id}/artifacts` and `POST /artifacts` are implemented as 501 Not Implemented placeholders to align the server with the documented contract.

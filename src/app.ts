@@ -588,6 +588,28 @@ const handleGetRun = (
   });
 };
 
+const handleListRunArtifacts = (
+  _state: AppState,
+  response: ServerResponse,
+  _runKey: string,
+): void => {
+  sendJson(response, 501, { error: 'not_implemented' });
+};
+
+const handleCreateArtifact = async (
+  _state: AppState,
+  request: IncomingMessage,
+  response: ServerResponse,
+): Promise<void> => {
+  try {
+    await readRequestBody(request);
+  } catch (_error) {
+    // Drain errors and continue with the not implemented response.
+  }
+
+  sendJson(response, 501, { error: 'not_implemented' });
+};
+
 const createAttentionId = (): string => `attn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
 interface CreateAttentionParams {
@@ -1014,6 +1036,16 @@ const handleRequest = async (
       return;
     }
 
+    if (segments.length === 3 && segments[2] === 'artifacts' && method === 'GET') {
+      const runKey = decodePathSegment(segments[1]);
+      if (!runKey) {
+        sendJson(response, 400, { error: 'invalid_run_key' });
+        return;
+      }
+      handleListRunArtifacts(state, response, runKey);
+      return;
+    }
+
     if (segments.length === 3 && segments[2] === 'attention' && method === 'GET') {
       const runKey = decodePathSegment(segments[1]);
       if (!runKey) {
@@ -1035,6 +1067,13 @@ const handleRequest = async (
   if (segments.length > 0 && segments[0] === 'invocations') {
     if (method === 'POST' && segments.length === 2 && segments[1] === 'request') {
       await handleRequestInvocation(state, request, response);
+      return;
+    }
+  }
+
+  if (segments.length > 0 && segments[0] === 'artifacts') {
+    if (method === 'POST' && segments.length === 1) {
+      await handleCreateArtifact(state, request, response);
       return;
     }
   }

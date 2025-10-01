@@ -68,7 +68,8 @@
 
 ## Phase 7 — OpenAPI fidelity
 
-- [ ] Ensure handlers match OpenAPI; generate minimal client types (optional)
+- [x] Ensure handlers match OpenAPI; generate minimal client types (optional)
+  - Completed: Added not-implemented artifact handlers matching OpenAPI responses and covered via integration tests. — tests: `npm test`, `npm run e2e:smoke`
   - **AC:** OpenAPI linter is clean; paths ↔ handlers parity documented in AGENTS.md.
 
 ## Phase 8 — Policies (MVP)
