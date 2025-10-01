@@ -24,6 +24,15 @@ type TriggerType =
   | 'on_run_complete'
   | 'on_attention_resolved';
 
+type NextTriggerStatus = 'queued' | 'pending' | 'active' | 'complete';
+
+interface NextTrigger {
+  event: TriggerType;
+  label: string;
+  status: NextTriggerStatus;
+  description: string;
+}
+
 interface AutomationCall {
   capability_id: string;
   payload_template: Record<string, unknown>;
@@ -160,6 +169,104 @@ const sendJson = (response: ServerResponse, statusCode: number, payload: unknown
   response.end(JSON.stringify(payload));
 };
 
+const cloneActivityLogEntry = (entry: ActivityLogEntry): ActivityLogEntry => ({
+  timestamp: entry.timestamp,
+  event: entry.event,
+  message: entry.message,
+  ...(entry.metadata ? { metadata: { ...entry.metadata } } : {}),
+});
+
+const normalizeRunForResponse = (run: RunRecord): RunRecord => ({
+  run_key: run.run_key,
+  ritual_key: run.ritual_key,
+  status: run.status,
+  created_at: run.created_at,
+  updated_at: run.updated_at,
+  inputs: run.inputs.map((input) => ({ ...input })),
+  activity_log: run.activity_log.map((entry) => cloneActivityLogEntry(entry)),
+});
+
+const normalizeAttentionItem = (item: AttentionItem): AttentionItem => ({
+  attention_id: item.attention_id,
+  run_key: item.run_key,
+  type: item.type,
+  message: item.message,
+  resolved: item.resolved,
+  created_at: item.created_at,
+  ...(item.resolved_at ? { resolved_at: item.resolved_at } : {}),
+});
+
+const normalizeRitualSummary = (ritual: RitualRecord): Pick<
+  RitualRecord,
+  'ritual_key' | 'name' | 'instant_runs' | 'inputs' | 'created_at' | 'updated_at'
+> => ({
+  ritual_key: ritual.ritual_key,
+  name: ritual.name,
+  instant_runs: ritual.instant_runs,
+  inputs: ritual.inputs.map((input) => ({ ...input })),
+  created_at: ritual.created_at,
+  updated_at: ritual.updated_at,
+});
+
+const buildNextTriggers = (run: RunRecord): NextTrigger[] => {
+  if (run.status === 'complete') {
+    return [
+      {
+        event: 'on_run_complete',
+        label: 'Wrap-up logged',
+        status: 'complete',
+        description: 'Agents recorded the completion details.',
+      },
+    ];
+  }
+
+  if (run.status === 'in_progress') {
+    return [
+      {
+        event: 'on_run_start',
+        label: 'Session underway',
+        status: 'active',
+        description: 'Agents are actively working through the run steps.',
+      },
+      {
+        event: 'on_run_complete',
+        label: 'Wrap-up & summary',
+        status: 'queued',
+        description: 'Once tasks are complete, agents will log the outcome.',
+      },
+    ];
+  }
+
+  return [
+    {
+      event: 'on_run_planned',
+      label: 'Agent review',
+      status: 'active',
+      description: 'Agents confirm prerequisites and prep the next steps.',
+    },
+    {
+      event: 'before_run_start',
+      label: 'Reminder window',
+      status: 'pending',
+      description: 'Expect a nudge shortly before kickoff (mock reminder).',
+    },
+    {
+      event: 'on_run_start',
+      label: 'Kickoff session',
+      status: 'queued',
+      description: 'Agents will start execution once prerequisites are clear.',
+    },
+  ];
+};
+
+const decodePathSegment = (value: string): string | null => {
+  try {
+    return decodeURIComponent(value);
+  } catch (_error) {
+    return null;
+  }
+};
+
 const readRequestBody = (request: IncomingMessage): Promise<string> =>
   new Promise((resolve, reject) => {
     const source = request as IncomingMessageWithBody;
@@ -185,15 +292,7 @@ const readRequestBody = (request: IncomingMessage): Promise<string> =>
 
 const normalizeRitualForResponse = (ritual: RitualRecord): RitualRecord => ({
   ...ritual,
-  runs: ritual.runs.map((run) => ({
-    run_key: run.run_key,
-    ritual_key: run.ritual_key,
-    status: run.status,
-    created_at: run.created_at,
-    updated_at: run.updated_at,
-    activity_log: run.activity_log,
-    inputs: run.inputs.map((input) => ({ ...input })),
-  })),
+  runs: ritual.runs.map((run) => normalizeRunForResponse(run)),
 });
 
 const handleCreateRitual = async (
@@ -398,10 +497,33 @@ const handleCreateRun = async (
   state.runs.set(runKey, run);
 
   sendJson(response, 201, {
-    run: {
-      ...run,
-      inputs: run.inputs.map((input) => ({ ...input })),
-    },
+    run: normalizeRunForResponse(run),
+  });
+};
+
+const handleGetRun = (
+  state: AppState,
+  response: ServerResponse,
+  runKey: string,
+): void => {
+  const run = state.runs.get(runKey);
+
+  if (!run) {
+    sendJson(response, 404, { error: 'run_not_found' });
+    return;
+  }
+
+  const ritual = state.rituals.get(run.ritual_key);
+  const attentionItems = Array.from(state.attentionItems.values())
+    .filter((item) => item.run_key === runKey)
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .map((item) => normalizeAttentionItem(item));
+
+  sendJson(response, 200, {
+    run: normalizeRunForResponse(run),
+    ritual: ritual ? normalizeRitualSummary(ritual) : undefined,
+    attention_items: attentionItems,
+    next_triggers: buildNextTriggers(run),
   });
 };
 
@@ -472,7 +594,7 @@ const handleCreateAttention = async (
 
   state.attentionItems.set(attentionItem.attention_id, attentionItem);
 
-  sendJson(response, 201, { attention: attentionItem });
+  sendJson(response, 201, { attention: normalizeAttentionItem(attentionItem) });
 };
 
 const handleGetRunAttention = (
@@ -485,9 +607,10 @@ const handleGetRunAttention = (
     return;
   }
 
-  const items = Array.from(state.attentionItems.values()).filter(
-    (item) => item.run_key === runKey,
-  );
+  const items = Array.from(state.attentionItems.values())
+    .filter((item) => item.run_key === runKey)
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .map((item) => normalizeAttentionItem(item));
 
   sendJson(response, 200, { attention_items: items });
 };
@@ -534,7 +657,7 @@ const handleResolveAttention = async (
 
   run.updated_at = timestamp;
 
-  sendJson(response, 200, { attention: attentionItem });
+  sendJson(response, 200, { attention: normalizeAttentionItem(attentionItem) });
 };
 
 const createAutomationId = (): string => `auto_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -739,7 +862,12 @@ const handleRequest = async (
     }
 
     if (segments.length === 2) {
-      const ritualKey = segments[1];
+      const ritualKey = decodePathSegment(segments[1]);
+
+      if (!ritualKey) {
+        sendJson(response, 400, { error: 'invalid_ritual_key' });
+        return;
+      }
 
       if (method === 'GET') {
         handleGetRitual(state, response, ritualKey);
@@ -748,7 +876,11 @@ const handleRequest = async (
     }
 
     if (segments.length === 3 && segments[2] === 'runs' && method === 'POST') {
-      const ritualKey = segments[1];
+      const ritualKey = decodePathSegment(segments[1]);
+      if (!ritualKey) {
+        sendJson(response, 400, { error: 'invalid_ritual_key' });
+        return;
+      }
       await handleCreateRun(state, request, response, ritualKey);
       return;
     }
@@ -761,15 +893,33 @@ const handleRequest = async (
     }
 
     if (method === 'POST' && segments.length === 3 && segments[2] === 'resolve') {
-      const attentionId = segments[1];
+      const attentionId = decodePathSegment(segments[1]);
+      if (!attentionId) {
+        sendJson(response, 400, { error: 'invalid_attention_id' });
+        return;
+      }
       await handleResolveAttention(state, request, response, attentionId);
       return;
     }
   }
 
   if (segments.length > 0 && segments[0] === 'runs') {
+    if (segments.length === 2 && method === 'GET') {
+      const runKey = decodePathSegment(segments[1]);
+      if (!runKey) {
+        sendJson(response, 400, { error: 'invalid_run_key' });
+        return;
+      }
+      handleGetRun(state, response, runKey);
+      return;
+    }
+
     if (segments.length === 3 && segments[2] === 'attention' && method === 'GET') {
-      const runKey = segments[1];
+      const runKey = decodePathSegment(segments[1]);
+      if (!runKey) {
+        sendJson(response, 400, { error: 'invalid_run_key' });
+        return;
+      }
       handleGetRunAttention(state, response, runKey);
       return;
     }

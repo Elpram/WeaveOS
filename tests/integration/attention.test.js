@@ -119,8 +119,8 @@ describe('Attention Items API', () => {
 
       assert.ok(listData.attention_items);
       assert.strictEqual(listData.attention_items.length, 2);
-      assert.strictEqual(listData.attention_items[0].message, 'First issue');
-      assert.strictEqual(listData.attention_items[1].message, 'Second issue');
+      assert.strictEqual(listData.attention_items[0].message, 'Second issue');
+      assert.strictEqual(listData.attention_items[1].message, 'First issue');
     } finally {
       server.close();
     }
