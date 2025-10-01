@@ -163,6 +163,40 @@ const createInitialState = (): AppState => ({
   automations: new Map(),
 });
 
+type NowFn = () => Date;
+
+const defaultNow: NowFn = () => new Date();
+
+const cloneInputs = (inputs: RitualInput[]): RitualInput[] =>
+  inputs.map((input) => ({ ...input }));
+
+const createRitualRecord = (
+  state: AppState,
+  data: {
+    ritual_key: string;
+    name: string;
+    instant_runs: boolean;
+    inputs: RitualInput[];
+  },
+  now: NowFn = defaultNow,
+): RitualRecord => {
+  const timestamp = now().toISOString();
+
+  const ritual: RitualRecord = {
+    ritual_key: data.ritual_key,
+    name: data.name,
+    instant_runs: data.instant_runs,
+    inputs: cloneInputs(data.inputs),
+    created_at: timestamp,
+    updated_at: timestamp,
+    runs: [],
+  };
+
+  state.rituals.set(ritual.ritual_key, ritual);
+
+  return ritual;
+};
+
 const sendJson = (response: ServerResponse, statusCode: number, payload: unknown): void => {
   response.statusCode = statusCode;
   response.setHeader('content-type', 'application/json');
@@ -182,7 +216,7 @@ const normalizeRunForResponse = (run: RunRecord): RunRecord => ({
   status: run.status,
   created_at: run.created_at,
   updated_at: run.updated_at,
-  inputs: run.inputs.map((input) => ({ ...input })),
+  inputs: cloneInputs(run.inputs),
   activity_log: run.activity_log.map((entry) => cloneActivityLogEntry(entry)),
 });
 
@@ -203,7 +237,7 @@ const normalizeRitualSummary = (ritual: RitualRecord): Pick<
   ritual_key: ritual.ritual_key,
   name: ritual.name,
   instant_runs: ritual.instant_runs,
-  inputs: ritual.inputs.map((input) => ({ ...input })),
+  inputs: cloneInputs(ritual.inputs),
   created_at: ritual.created_at,
   updated_at: ritual.updated_at,
 });
@@ -291,7 +325,12 @@ const readRequestBody = (request: IncomingMessage): Promise<string> =>
   });
 
 const normalizeRitualForResponse = (ritual: RitualRecord): RitualRecord => ({
-  ...ritual,
+  ritual_key: ritual.ritual_key,
+  name: ritual.name,
+  instant_runs: ritual.instant_runs,
+  inputs: cloneInputs(ritual.inputs),
+  created_at: ritual.created_at,
+  updated_at: ritual.updated_at,
   runs: ritual.runs.map((run) => normalizeRunForResponse(run)),
 });
 
@@ -389,18 +428,12 @@ const handleCreateRitual = async (
     });
   }
 
-  const timestamp = new Date().toISOString();
-  const ritual: RitualRecord = {
+  const ritual = createRitualRecord(state, {
     ritual_key: ritualKey,
     name,
     instant_runs: instantRuns,
     inputs: normalizedInputs,
-    created_at: timestamp,
-    updated_at: timestamp,
-    runs: [],
-  };
-
-  state.rituals.set(ritualKey, ritual);
+  });
 
   sendJson(response, 201, { ritual: normalizeRitualForResponse(ritual) });
 };
@@ -430,6 +463,52 @@ const handleGetRitual = (
 const createRunKey = (ritualKey: string): string => {
   const timestamp = new Date().toISOString();
   return `weave-run-${ritualKey}-${timestamp}`;
+};
+
+interface CreateRunOptions {
+  runKey?: string;
+  now?: NowFn;
+  completionTime?: NowFn;
+}
+
+const createRunRecord = (
+  state: AppState,
+  ritual: RitualRecord,
+  options: CreateRunOptions = {},
+): RunRecord => {
+  const runKey = options.runKey ?? createRunKey(ritual.ritual_key);
+
+  if (state.runs.has(runKey)) {
+    throw Object.assign(new Error(`run ${runKey} already exists`), {
+      code: 'run_already_exists',
+    });
+  }
+
+  const now = options.now ?? defaultNow;
+  const createdTimestamp = now().toISOString();
+
+  const run: RunRecord = {
+    run_key: runKey,
+    ritual_key: ritual.ritual_key,
+    status: 'planned',
+    created_at: createdTimestamp,
+    updated_at: createdTimestamp,
+    activity_log: [],
+    inputs: cloneInputs(ritual.inputs),
+  };
+
+  if (ritual.instant_runs) {
+    const completionTime = options.completionTime ?? defaultNow;
+    const completionTimestamp = completionTime().toISOString();
+    run.status = 'complete';
+    run.updated_at = completionTimestamp;
+  }
+
+  ritual.runs.push(run);
+  ritual.updated_at = run.updated_at;
+  state.runs.set(runKey, run);
+
+  return run;
 };
 
 const handleCreateRun = async (
@@ -476,25 +555,7 @@ const handleCreateRun = async (
     return;
   }
 
-  const createdAt = new Date();
-  const run: RunRecord = {
-    run_key: runKey,
-    ritual_key: ritual.ritual_key,
-    status: 'planned',
-    created_at: createdAt.toISOString(),
-    updated_at: createdAt.toISOString(),
-    activity_log: [],
-    inputs: ritual.inputs.map((input) => ({ ...input })),
-  };
-
-  if (ritual.instant_runs) {
-    run.status = 'complete';
-    run.updated_at = new Date().toISOString();
-  }
-
-  ritual.updated_at = run.updated_at;
-  ritual.runs.push(run);
-  state.runs.set(runKey, run);
+  const run = createRunRecord(state, ritual, { runKey });
 
   sendJson(response, 201, {
     run: normalizeRunForResponse(run),
@@ -528,6 +589,67 @@ const handleGetRun = (
 };
 
 const createAttentionId = (): string => `attn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+interface CreateAttentionParams {
+  type: AttentionItem['type'];
+  message: string;
+}
+
+const createAttentionItemRecord = (
+  state: AppState,
+  run: RunRecord,
+  params: CreateAttentionParams,
+  now: NowFn = defaultNow,
+): AttentionItem => {
+  const attentionId = createAttentionId();
+  const timestamp = now().toISOString();
+
+  const attentionItem: AttentionItem = {
+    attention_id: attentionId,
+    run_key: run.run_key,
+    type: params.type,
+    message: params.message,
+    resolved: false,
+    created_at: timestamp,
+  };
+
+  state.attentionItems.set(attentionId, attentionItem);
+
+  return attentionItem;
+};
+
+const resolveAttentionItemRecord = (
+  state: AppState,
+  attentionItem: AttentionItem,
+  now: NowFn = defaultNow,
+): AttentionItem => {
+  const run = state.runs.get(attentionItem.run_key);
+
+  if (!run) {
+    throw Object.assign(new Error(`run ${attentionItem.run_key} not found`), {
+      code: 'run_not_found',
+    });
+  }
+
+  const timestamp = now().toISOString();
+  attentionItem.resolved = true;
+  attentionItem.resolved_at = timestamp;
+
+  run.activity_log.push({
+    timestamp,
+    event: 'on_attention_resolved',
+    message: `Attention item resolved: ${attentionItem.type}`,
+    metadata: {
+      attention_id: attentionItem.attention_id,
+      attention_type: attentionItem.type,
+      original_message: attentionItem.message,
+    },
+  });
+
+  run.updated_at = timestamp;
+
+  return attentionItem;
+};
 
 const handleCreateAttention = async (
   state: AppState,
@@ -582,17 +704,12 @@ const handleCreateAttention = async (
     return;
   }
 
-  const timestamp = new Date().toISOString();
-  const attentionItem: AttentionItem = {
-    attention_id: createAttentionId(),
-    run_key: runKey,
-    type: type as AttentionItem['type'],
-    message,
-    resolved: false,
-    created_at: timestamp,
-  };
-
-  state.attentionItems.set(attentionItem.attention_id, attentionItem);
+  const run = state.runs.get(runKey) as RunRecord;
+  const attentionItem = createAttentionItemRecord(
+    state,
+    run,
+    { type: type as AttentionItem['type'], message },
+  );
 
   sendJson(response, 201, { attention: normalizeAttentionItem(attentionItem) });
 };
@@ -633,29 +750,12 @@ const handleResolveAttention = async (
     return;
   }
 
-  const run = state.runs.get(attentionItem.run_key);
-
-  if (!run) {
+  if (!state.runs.has(attentionItem.run_key)) {
     sendJson(response, 404, { error: 'run_not_found' });
     return;
   }
 
-  const timestamp = new Date().toISOString();
-  attentionItem.resolved = true;
-  attentionItem.resolved_at = timestamp;
-
-  run.activity_log.push({
-    timestamp,
-    event: 'on_attention_resolved',
-    message: `Attention item resolved: ${attentionItem.type}`,
-    metadata: {
-      attention_id: attentionItem.attention_id,
-      attention_type: attentionItem.type,
-      original_message: attentionItem.message,
-    },
-  });
-
-  run.updated_at = timestamp;
+  resolveAttentionItemRecord(state, attentionItem);
 
   sendJson(response, 200, { attention: normalizeAttentionItem(attentionItem) });
 };
@@ -940,6 +1040,18 @@ const handleRequest = async (
   }
 
   sendJson(response, 404, { status: 'not_found' });
+};
+
+export const __testing = {
+  createInitialState,
+  createRitualRecord,
+  createRunRecord,
+  createAttentionItemRecord,
+  resolveAttentionItemRecord,
+  normalizeRitualForResponse,
+  normalizeRunForResponse,
+  normalizeAttentionItem,
+  buildNextTriggers,
 };
 
 export const createAppServer = (_options: AppOptions = {}): Server => {
