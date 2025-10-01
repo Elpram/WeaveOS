@@ -50,7 +50,8 @@
 - [x] **Home**: single-line ritual creator + Upcoming + Needs Attention
   - Completed: Added static home dashboard with intent parser, ritual list, and attention feed backed by existing APIs. — tests: `npm test`, `npm run e2e:smoke`
   - **AC:** Can create a ritual by typing “Trash day Fridays 7am https://link”; ritual appears; link listed.
-- [ ] **Ritual page**: show cadence, instant badge, default inputs, “Create run now”
+- [x] **Ritual page**: show cadence, instant badge, default inputs, “Create run now” — tests: `npm test`, `npm run e2e:smoke`
+  - Completed: Added cadence parsing, ritual detail view with instant badge, saved inputs, and run launcher with success toast.
   - **AC:** Button creates a run; if instant, a toast shows “Run complete”.
 - [ ] **Run mini-hub**: show status, next triggers (mock), activity log, attention items
   - **AC:** Attention item created via API is visible and can be resolved (mock).

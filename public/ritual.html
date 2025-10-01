@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ritual • WeaveOS</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="detail-body">
+    <header class="detail-header">
+      <a class="back-link" href="/">← Back to dashboard</a>
+      <div class="detail-heading">
+        <h1 id="ritual-name">Loading ritual…</h1>
+        <p id="ritual-key" class="ritual-key" aria-live="polite"></p>
+      </div>
+    </header>
+    <main class="layout detail-layout" aria-live="polite">
+      <section class="card detail-card" aria-labelledby="overview-title">
+        <div class="card-header">
+          <div>
+            <h2 id="overview-title">Overview</h2>
+            <p class="card-support">Cadence, instant-run behaviour, and saved references.</p>
+          </div>
+          <span id="instant-badge" class="badge" hidden>Instant runs</span>
+        </div>
+        <dl class="meta-grid">
+          <div class="meta-row">
+            <dt>Cadence</dt>
+            <dd id="ritual-cadence">Detecting cadence…</dd>
+          </div>
+          <div class="meta-row">
+            <dt>Instant runs</dt>
+            <dd id="ritual-instant">Loading…</dd>
+          </div>
+        </dl>
+        <div class="inputs-section">
+          <h3>Default inputs</h3>
+          <ul id="inputs-list" class="inputs-list" role="list"></ul>
+          <p id="inputs-empty" class="empty-state" hidden>No saved links yet.</p>
+        </div>
+      </section>
+      <section class="card detail-card" aria-labelledby="runs-title">
+        <div class="card-header">
+          <div>
+            <h2 id="runs-title">Recent runs</h2>
+            <p class="card-support">Latest activity for this ritual.</p>
+          </div>
+          <button id="create-run" type="button">Create run now</button>
+        </div>
+        <ul id="run-list" class="run-list" role="list"></ul>
+        <p id="runs-empty" class="empty-state" hidden>No runs yet. Trigger one to see updates.</p>
+      </section>
+    </main>
+    <div id="toast" class="toast" role="status" aria-live="assertive" hidden></div>
+    <script src="/ritual.js" defer></script>
+  </body>
+</html>

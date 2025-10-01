@@ -71,6 +71,7 @@ interface RitualRecord {
   ritual_key: string;
   name: string;
   instant_runs: boolean;
+  cadence?: string | null;
   inputs: RitualInput[];
   created_at: string;
   updated_at: string;
@@ -185,6 +186,7 @@ const readRequestBody = (request: IncomingMessage): Promise<string> =>
 
 const normalizeRitualForResponse = (ritual: RitualRecord): RitualRecord => ({
   ...ritual,
+  cadence: ritual.cadence ?? null,
   runs: ritual.runs.map((run) => ({
     run_key: run.run_key,
     ritual_key: run.ritual_key,
@@ -221,11 +223,13 @@ const handleCreateRitual = async (
   const {
     ritual_key: ritualKey,
     name,
+    cadence,
     instant_runs: instantRuns = false,
     inputs = [],
   } = payload as {
     ritual_key?: unknown;
     name?: unknown;
+    cadence?: unknown;
     instant_runs?: unknown;
     inputs?: unknown;
   };
@@ -249,6 +253,13 @@ const handleCreateRitual = async (
     sendJson(response, 400, { error: 'inputs_must_be_array' });
     return;
   }
+
+  if (cadence !== undefined && cadence !== null && typeof cadence !== 'string') {
+    sendJson(response, 400, { error: 'cadence_must_be_string' });
+    return;
+  }
+
+  const normalizedCadence = typeof cadence === 'string' ? cadence.trim() : null;
 
   if (state.rituals.has(ritualKey)) {
     sendJson(response, 409, { error: 'ritual_already_exists' });
@@ -295,6 +306,7 @@ const handleCreateRitual = async (
     ritual_key: ritualKey,
     name,
     instant_runs: instantRuns,
+    cadence: normalizedCadence,
     inputs: normalizedInputs,
     created_at: timestamp,
     updated_at: timestamp,

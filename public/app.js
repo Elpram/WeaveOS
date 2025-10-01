@@ -26,12 +26,80 @@
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
 
+  const cadenceKeywords = new Set([
+    'every',
+    'daily',
+    'weekly',
+    'biweekly',
+    'monthly',
+    'quarterly',
+    'yearly',
+    'weekday',
+    'weekdays',
+    'weekend',
+    'weekends',
+    'morning',
+    'evening',
+    'night',
+    'noon',
+    'midnight',
+    'monday',
+    'mondays',
+    'tuesday',
+    'tuesdays',
+    'wednesday',
+    'wednesdays',
+    'thursday',
+    'thursdays',
+    'friday',
+    'fridays',
+    'saturday',
+    'saturdays',
+    'sunday',
+    'sundays',
+  ]);
+
+  const isTimeToken = (token) => {
+    const normalized = token.toLowerCase().replace(/[^a-z0-9:]/g, '');
+    if (!normalized) {
+      return false;
+    }
+
+    if (cadenceKeywords.has(normalized)) {
+      return true;
+    }
+
+    if (/^\d{1,2}(:\d{2})?(am|pm)?$/i.test(normalized)) {
+      return true;
+    }
+
+    if (['am', 'pm'].includes(normalized)) {
+      return true;
+    }
+
+    return false;
+  };
+
   const parseIntent = (rawIntent) => {
     const trimmed = rawIntent.trim();
     const urlMatch = trimmed.match(/https?:\/\/\S+/);
     const link = urlMatch ? urlMatch[0] : null;
-    const name = link ? trimmed.replace(link, '').trim() : trimmed;
-    const fallbackName = name.length > 0 ? name : 'Untitled ritual';
+    const withoutLink = link ? trimmed.replace(link, '').trim() : trimmed;
+    const tokens = withoutLink.split(/\s+/).filter(Boolean);
+    let cadenceStart = -1;
+
+    for (let index = 0; index < tokens.length; index += 1) {
+      if (isTimeToken(tokens[index])) {
+        cadenceStart = index;
+        break;
+      }
+    }
+
+    const nameTokens = cadenceStart > 0 ? tokens.slice(0, cadenceStart) : tokens;
+    const cadenceTokens = cadenceStart > 0 ? tokens.slice(cadenceStart) : [];
+    const name = nameTokens.join(' ').trim();
+    const cadence = cadenceTokens.join(' ').trim();
+    const fallbackName = name.length > 0 ? name : withoutLink || 'Untitled ritual';
     const slug = slugify(fallbackName) || 'ritual';
     const uniqueSuffix = Date.now().toString(36);
     const ritualKey = `${slug}-${uniqueSuffix}`;
@@ -39,6 +107,7 @@
     return {
       name: fallbackName,
       link,
+      cadence: cadence || null,
       ritualKey,
     };
   };
@@ -172,9 +241,10 @@
 
         const header = document.createElement('div');
         header.className = 'ritual-header';
-        const nameEl = document.createElement('span');
+        const nameEl = document.createElement('a');
         nameEl.className = 'ritual-name';
         nameEl.textContent = ritual.name;
+        nameEl.href = `/ritual.html?ritual=${encodeURIComponent(ritual.ritual_key)}`;
         header.appendChild(nameEl);
 
         const badge = document.createElement('span');
@@ -183,6 +253,13 @@
         header.appendChild(badge);
 
         item.appendChild(header);
+
+        if (ritual.cadence) {
+          const cadence = document.createElement('p');
+          cadence.className = 'ritual-cadence';
+          cadence.textContent = ritual.cadence;
+          item.appendChild(cadence);
+        }
 
         const behaviour = document.createElement('p');
         behaviour.className = 'ritual-behaviour';
@@ -297,7 +374,7 @@
       return;
     }
 
-    const { name, link, ritualKey } = parseIntent(rawIntent);
+    const { name, link, cadence, ritualKey } = parseIntent(rawIntent);
     let linkLabel = null;
     if (link) {
       try {
@@ -311,6 +388,7 @@
     const payload = {
       ritual_key: ritualKey,
       name,
+      cadence,
       instant_runs: instantCheckbox.checked,
       inputs: link
         ? [
