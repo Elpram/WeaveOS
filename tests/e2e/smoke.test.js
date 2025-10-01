@@ -33,8 +33,9 @@ test('household ritual smoke test', async () => {
   try {
     const ritualRequest = {
       ritual_key: 'trash-day',
-      name: 'Trash day Fridays 7am',
+      name: 'Trash day',
       instant_runs: true,
+      cadence: 'Fridays 7am',
       inputs: [
         {
           type: 'external_link',
@@ -53,6 +54,7 @@ test('household ritual smoke test', async () => {
     const { ritual } = await createRitualResponse.json();
     assert.equal(ritual.ritual_key, ritualRequest.ritual_key);
     assert.equal(ritual.instant_runs, true);
+    assert.equal(ritual.cadence, ritualRequest.cadence);
 
     const createRunResponse = await fetch(`${baseUrl}/rituals/${ritual.ritual_key}/runs`, {
       method: 'POST',
@@ -69,6 +71,7 @@ test('household ritual smoke test', async () => {
     const runDetails = await runDetailsResponse.json();
     assert.equal(runDetails.run.status, 'complete');
     assert.equal(runDetails.ritual.ritual_key, ritual.ritual_key);
+    assert.equal(runDetails.ritual.cadence, ritualRequest.cadence);
     assert.deepEqual(runDetails.run.inputs, ritualRequest.inputs);
     assert.ok(Array.isArray(runDetails.next_triggers));
     assert.ok(

@@ -33,8 +33,9 @@ test('GET /runs/{run_id} returns run details with attention and triggers', async
   try {
     const ritualPayload = {
       ritual_key: 'laundry-day',
-      name: 'Laundry day Saturday 9am',
+      name: 'Laundry day',
       instant_runs: false,
+      cadence: 'Saturday 9am',
       inputs: [
         {
           type: 'external_link',
@@ -67,6 +68,7 @@ test('GET /runs/{run_id} returns run details with attention and triggers', async
 
     assert.equal(initialPayload.run.run_key, run.run_key);
     assert.equal(initialPayload.ritual.ritual_key, ritualPayload.ritual_key);
+    assert.equal(initialPayload.ritual.cadence, ritualPayload.cadence);
     assert.ok(Array.isArray(initialPayload.next_triggers));
     assert.ok(initialPayload.next_triggers.length > 0, 'next_triggers should include mock entries');
     assert.deepEqual(initialPayload.run.inputs, ritualPayload.inputs);
