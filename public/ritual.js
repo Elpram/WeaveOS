@@ -93,6 +93,34 @@
     }).format(date);
   };
 
+  const formatRunKeyLabel = (runKey, ritualName) => {
+    const prefix = 'Weave run';
+    const safeRitualName = typeof ritualName === 'string' && ritualName.trim().length > 0 ? ritualName.trim() : null;
+
+    if (typeof runKey !== 'string' || runKey.trim().length === 0) {
+      return safeRitualName ? `${prefix} • ${safeRitualName}` : prefix;
+    }
+
+    const runKeyPattern = /^weave-run-(.+)-(\d{4}-\d{2}-\d{2}T.+)$/;
+    const match = runKey.trim().match(runKeyPattern);
+
+    if (!match) {
+      if (safeRitualName) {
+        return `${prefix} • ${safeRitualName} • ${runKey.trim()}`;
+      }
+      return `${prefix} • ${runKey.trim()}`;
+    }
+
+    const [, rawRitualKey, timestamp] = match;
+    const labelName = safeRitualName || rawRitualKey.replace(/-/g, ' ').trim();
+    const timestampDate = new Date(timestamp);
+    const formattedDate = Number.isNaN(timestampDate.getTime())
+      ? timestamp
+      : new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(timestampDate);
+
+    return `${prefix} • ${labelName} • ${formattedDate}`;
+  };
+
   const statusLabel = (status) => {
     switch (status) {
       case 'planned':
@@ -152,7 +180,7 @@
     });
   };
 
-  const renderRuns = (runs = []) => {
+  const renderRuns = (runs = [], ritualName) => {
     runsList.innerHTML = '';
     if (!Array.isArray(runs) || runs.length === 0) {
       runsEmpty.hidden = false;
@@ -176,7 +204,7 @@
 
       const key = document.createElement('span');
       key.className = 'run-key';
-      key.textContent = run.run_key;
+      key.textContent = formatRunKeyLabel(run.run_key, ritualName);
       header.appendChild(key);
 
       const badge = document.createElement('span');
@@ -233,9 +261,9 @@
   };
 
   const renderRitual = (ritual) => {
-    const { name, cadence } = extractNameAndCadence(ritual.name);
+    const { name: displayName, cadence } = extractNameAndCadence(ritual.name);
 
-    nameEl.textContent = name;
+    nameEl.textContent = displayName;
     keyEl.textContent = `Ritual key: ${ritual.ritual_key}`;
 
     instantBadge.hidden = !ritual.instant_runs;
@@ -250,7 +278,7 @@
 
     updateSubtitle(ritual);
     renderInputs(ritual.inputs || []);
-    renderRuns(ritual.runs || []);
+    renderRuns(ritual.runs || [], displayName);
   };
 
   const loadRitual = async () => {
