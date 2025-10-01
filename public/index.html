@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ritual OS</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <h1>Ritual OS</h1>
+      <p class="app-subtitle">Lightweight rituals, instant runs, human-in-the-loop.</p>
+    </header>
+    <main class="layout">
+      <section class="card">
+        <h2>Create a ritual</h2>
+        <form id="ritual-form" class="ritual-form">
+          <label class="input-group" for="ritual-intent">
+            <span class="input-label">Intent</span>
+            <input
+              id="ritual-intent"
+              name="intent"
+              type="text"
+              placeholder="Trash day Fridays 7am https://city/trash"
+              autocomplete="off"
+              required
+            />
+          </label>
+          <label class="checkbox">
+            <input id="instant-runs" name="instant" type="checkbox" checked />
+            <span>Instant runs (auto-complete)</span>
+          </label>
+          <button type="submit">Create ritual</button>
+          <p id="form-feedback" class="form-feedback" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+      <section class="card" aria-labelledby="upcoming-title">
+        <div class="card-header">
+          <h2 id="upcoming-title">Upcoming rituals</h2>
+          <button id="refresh" type="button" class="secondary">Refresh</button>
+        </div>
+        <ul id="upcoming-list" class="ritual-list" role="list"></ul>
+        <p id="upcoming-empty" class="empty-state" hidden>No rituals yet. Create one to get started.</p>
+      </section>
+      <section class="card" aria-labelledby="attention-title">
+        <h2 id="attention-title">Needs attention</h2>
+        <ul id="attention-list" class="attention-list" role="list"></ul>
+        <p id="attention-empty" class="empty-state" hidden>No attention items right now.</p>
+      </section>
+    </main>
+    <script src="/app.js" defer></script>
+  </body>
+</html>

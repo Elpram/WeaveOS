@@ -47,7 +47,8 @@
 
 ## Phase 5 — Minimal UI (no build tools required)
 
-- [ ] **Home**: single-line ritual creator + Upcoming + Needs Attention
+- [x] **Home**: single-line ritual creator + Upcoming + Needs Attention
+  - Completed: Added static home dashboard with intent parser, ritual list, and attention feed backed by existing APIs. — tests: `npm test`, `npm run e2e:smoke`
   - **AC:** Can create a ritual by typing “Trash day Fridays 7am https://link”; ritual appears; link listed.
 - [ ] **Ritual page**: show cadence, instant badge, default inputs, “Create run now”
   - **AC:** Button creates a run; if instant, a toast shows “Run complete”.
