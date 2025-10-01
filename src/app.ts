@@ -97,6 +97,12 @@ interface AppState {
   runs: Map<string, RunRecord>;
   attentionItems: Map<string, AttentionItem>;
   automations: Map<string, Automation>;
+  idempotencyRecords: Map<string, IdempotencyRecord>;
+}
+
+interface IdempotencyRecord {
+  statusCode: number;
+  payload: unknown;
 }
 
 const HOUSEHOLD_ROLES = ['Owner', 'Adult', 'Teen', 'Guest', 'Agent'] as const;
@@ -196,6 +202,7 @@ const createInitialState = (): AppState => ({
   runs: new Map(),
   attentionItems: new Map(),
   automations: new Map(),
+  idempotencyRecords: new Map(),
 });
 
 type NowFn = () => Date;
@@ -236,6 +243,37 @@ const sendJson = (response: ServerResponse, statusCode: number, payload: unknown
   response.statusCode = statusCode;
   response.setHeader('content-type', 'application/json');
   response.end(JSON.stringify(payload));
+};
+
+const getIdempotencyKeyFromRequest = (request: IncomingMessage): string | undefined => {
+  const rawHeader = request.headers['idempotency-key'];
+
+  if (rawHeader === undefined) {
+    return undefined;
+  }
+
+  const headerValue = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader;
+
+  if (typeof headerValue !== 'string') {
+    return undefined;
+  }
+
+  const normalizedValue = headerValue.trim();
+
+  if (normalizedValue.length === 0) {
+    return undefined;
+  }
+
+  return normalizedValue;
+};
+
+const respondWithIdempotencyRecord = (
+  response: ServerResponse,
+  record: IdempotencyRecord,
+): void => {
+  response.statusCode = record.statusCode;
+  response.setHeader('content-type', 'application/json');
+  response.end(JSON.stringify(record.payload));
 };
 
 const cloneActivityLogEntry = (entry: ActivityLogEntry): ActivityLogEntry => ({
@@ -807,11 +845,23 @@ const handleResolveAttention = async (
     return;
   }
 
+  const idempotencyKey = getIdempotencyKeyFromRequest(request);
+  const idempotencyMapKey =
+    idempotencyKey !== undefined ? `attention_resolve:${attentionId}:${idempotencyKey}` : undefined;
+
   const attentionItem = state.attentionItems.get(attentionId);
 
   if (!attentionItem) {
     sendJson(response, 404, { error: 'attention_item_not_found' });
     return;
+  }
+
+  if (idempotencyMapKey) {
+    const record = state.idempotencyRecords.get(idempotencyMapKey);
+    if (record) {
+      respondWithIdempotencyRecord(response, record);
+      return;
+    }
   }
 
   if (attentionItem.resolved) {
@@ -829,9 +879,17 @@ const handleResolveAttention = async (
     return;
   }
 
-  resolveAttentionItemRecord(state, attentionItem);
+  const resolvedItem = resolveAttentionItemRecord(state, attentionItem);
+  const responsePayload = { attention: normalizeAttentionItem(resolvedItem) };
 
-  sendJson(response, 200, { attention: normalizeAttentionItem(attentionItem) });
+  if (idempotencyMapKey) {
+    state.idempotencyRecords.set(idempotencyMapKey, {
+      statusCode: 200,
+      payload: responsePayload,
+    });
+  }
+
+  sendJson(response, 200, responsePayload);
 };
 
 const createAutomationId = (): string => `auto_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -841,6 +899,18 @@ const handleCreateAutomation = async (
   request: IncomingMessage,
   response: ServerResponse,
 ): Promise<void> => {
+  const idempotencyKey = getIdempotencyKeyFromRequest(request);
+  const idempotencyMapKey =
+    idempotencyKey !== undefined ? `automation:${idempotencyKey}` : undefined;
+
+  if (idempotencyMapKey) {
+    const record = state.idempotencyRecords.get(idempotencyMapKey);
+    if (record) {
+      respondWithIdempotencyRecord(response, record);
+      return;
+    }
+  }
+
   const rawBody = await readRequestBody(request);
   let payload: unknown = {};
 
@@ -946,7 +1016,23 @@ const handleCreateAutomation = async (
 
   state.automations.set(automation.automation_id, automation);
 
-  sendJson(response, 201, { automation });
+  const responsePayload = {
+    automation: {
+      ...automation,
+      call: {
+        ...automation.call,
+      },
+    },
+  };
+
+  if (idempotencyMapKey) {
+    state.idempotencyRecords.set(idempotencyMapKey, {
+      statusCode: 201,
+      payload: responsePayload,
+    });
+  }
+
+  sendJson(response, 201, responsePayload);
 };
 
 const createInvocationId = (): string => `inv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;

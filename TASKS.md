@@ -80,7 +80,8 @@
 
 ## Phase 9 — Quality: logs & idempotency
 
-- [ ] Add idempotency keys to automation calls (mock) and attention resolves
+- [x] Add idempotency keys to automation calls (mock) and attention resolves — tests: `npm test`, `npm run e2e:smoke`
+  - Completed: Added header-based idempotency caching for automation registration and attention resolution responses.
   - **AC:** Replaying the same request is safe (no dupes).
 - [ ] Structured logs
   - **AC:** Logs include `{event, run_id, ritual_id?, status}`.

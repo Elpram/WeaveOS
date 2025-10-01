@@ -230,6 +230,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/AttentionId'
         - $ref: '#/components/parameters/HouseholdRole'
+        - $ref: '#/components/parameters/IdempotencyKey'
       responses:
         '200':
           description: OK
@@ -257,6 +258,8 @@ paths:
         specific ritual or apply globally when no `ritual_key` is provided.
       tags: [Automations]
       operationId: createAutomation
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -340,6 +343,13 @@ components:
         type: string
         enum: [Owner, Adult, Teen, Guest, Agent]
       description: "Household role of the caller. Only Owners may resolve auth_needed items."
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: false
+      schema:
+        type: string
+      description: Unique key used to safely retry POST requests without duplicating side effects.
   schemas:
     HealthResponse:
       type: object
