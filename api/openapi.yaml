@@ -229,6 +229,7 @@ paths:
       operationId: resolveAttention
       parameters:
         - $ref: '#/components/parameters/AttentionId'
+        - $ref: '#/components/parameters/HouseholdRole'
       responses:
         '200':
           description: OK
@@ -331,6 +332,14 @@ components:
       schema:
         type: string
       description: Unique key for the run.
+    HouseholdRole:
+      in: header
+      name: X-Household-Role
+      required: true
+      schema:
+        type: string
+        enum: [Owner, Adult, Teen, Guest, Agent]
+      description: "Household role of the caller. Only Owners may resolve auth_needed items."
   schemas:
     HealthResponse:
       type: object
