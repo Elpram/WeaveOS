@@ -1,4 +1,6 @@
 import { createServer, IncomingMessage, Server, ServerResponse } from 'node:http';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
 
 export interface AppOptions {
   logger?: boolean;
@@ -87,6 +89,63 @@ interface AppState {
   attentionItems: Map<string, AttentionItem>;
   automations: Map<string, Automation>;
 }
+
+const PUBLIC_DIR = path.join(__dirname, '..', 'public');
+
+const CONTENT_TYPES: Record<string, string> = {
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml',
+};
+
+const tryServeStaticAsset = async (
+  request: IncomingMessage,
+  response: ServerResponse,
+  requestPath: string,
+): Promise<boolean> => {
+  if (!['GET', 'HEAD'].includes((request.method ?? 'GET').toUpperCase())) {
+    return false;
+  }
+
+  const normalizedPath = requestPath === '/' ? 'index.html' : requestPath.replace(/^\/+/, '');
+  const filePath = path.resolve(PUBLIC_DIR, normalizedPath);
+
+  if (!filePath.startsWith(PUBLIC_DIR)) {
+    return false;
+  }
+
+  try {
+    const file = await fs.readFile(filePath);
+    const extension = path.extname(filePath).toLowerCase();
+    const contentType = CONTENT_TYPES[extension] ?? 'application/octet-stream';
+
+    response.statusCode = 200;
+    response.setHeader('content-type', contentType);
+
+    if ((request.method ?? 'GET').toUpperCase() === 'HEAD') {
+      response.end();
+      return true;
+    }
+
+    const payload = typeof file === 'string' ? file : file.toString();
+    response.end(payload);
+    return true;
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error) {
+      const code = (error as { code?: string }).code;
+      if (code === 'ENOENT') {
+        return false;
+      }
+    }
+
+    response.statusCode = 500;
+    response.setHeader('content-type', 'application/json');
+    response.end(JSON.stringify({ status: 'error' }));
+    return true;
+  }
+};
 
 const createInitialState = (): AppState => ({
   rituals: new Map(),
@@ -655,6 +714,10 @@ const handleRequest = async (
   const requestUrl = request.url ?? '/';
   const [path] = requestUrl.split('?');
   const segments = path.split('/').filter((segment) => segment.length > 0);
+
+  if (await tryServeStaticAsset(request, response, path)) {
+    return;
+  }
 
   if (method === 'GET' && segments.length === 1 && segments[0] === 'health') {
     sendJson(response, 200, { status: 'ok' });

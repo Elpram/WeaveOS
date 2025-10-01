@@ -1,0 +1,292 @@
+:root {
+  color-scheme: light dark;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: #f5f5f5;
+  color: #1f2933;
+  line-height: 1.5;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #f9fafb 0%, #eef2f7 100%);
+}
+
+.app-header {
+  padding: 2.5rem 1.5rem 1rem;
+  text-align: center;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 2.75rem);
+}
+
+.app-subtitle {
+  margin: 0.5rem 0 0;
+  color: #4b5563;
+  font-size: 1rem;
+}
+
+.layout {
+  display: grid;
+  gap: 1.5rem;
+  padding: 0 1.5rem 3rem;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+@media (min-width: 960px) {
+  .layout {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .layout > .card:first-of-type {
+    grid-column: span 3;
+  }
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+  padding: 1.5rem;
+  backdrop-filter: blur(12px);
+}
+
+.card h2 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.ritual-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.input-group {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.input-label {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+input[type='text'] {
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  font-size: 1rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input[type='text']:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2);
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #374151;
+}
+
+button {
+  appearance: none;
+  border: none;
+  border-radius: 999px;
+  background: #2563eb;
+  color: white;
+  font-weight: 600;
+  font-size: 1rem;
+  padding: 0.75rem 1.5rem;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 22px rgba(37, 99, 235, 0.25);
+}
+
+button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+button.secondary {
+  background: #e5e7eb;
+  color: #111827;
+  padding: 0.5rem 1rem;
+}
+
+button.secondary:hover {
+  box-shadow: none;
+  transform: none;
+  background: #d1d5db;
+}
+
+.form-feedback {
+  min-height: 1.25rem;
+  margin: 0;
+  font-size: 0.95rem;
+  color: #2563eb;
+}
+
+.form-feedback.error {
+  color: #dc2626;
+}
+
+.ritual-list,
+.attention-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.ritual-item {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: white;
+}
+
+.ritual-item header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.ritual-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.1);
+  color: #047857;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.badge.inactive {
+  background: rgba(251, 191, 36, 0.15);
+  color: #b45309;
+}
+
+.inputs-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.inputs-list li {
+  font-size: 0.9rem;
+}
+
+.inputs-list a {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.inputs-list a:hover {
+  text-decoration: underline;
+}
+
+.attention-item {
+  border-radius: 12px;
+  border: 1px solid #fee2e2;
+  background: #fef2f2;
+  padding: 1rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.attention-item strong {
+  font-size: 1rem;
+}
+
+.empty-state {
+  margin-top: 0.5rem;
+  color: #6b7280;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    background-color: #0f172a;
+    color: #f8fafc;
+  }
+
+  body {
+    background: radial-gradient(circle at top, #1e293b, #0f172a);
+  }
+
+  .card {
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+  }
+
+  .input-label {
+    color: #e2e8f0;
+  }
+
+  input[type='text'] {
+    border-color: rgba(148, 163, 184, 0.4);
+    background: rgba(15, 23, 42, 0.7);
+    color: inherit;
+  }
+
+  .ritual-item {
+    background: rgba(15, 23, 42, 0.9);
+    border-color: rgba(148, 163, 184, 0.25);
+  }
+
+  .badge {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+  }
+
+  .badge.inactive {
+    background: rgba(251, 191, 36, 0.25);
+    color: #facc15;
+  }
+
+  .inputs-list a {
+    color: #93c5fd;
+  }
+
+  .attention-item {
+    background: rgba(185, 28, 28, 0.15);
+    border-color: rgba(248, 113, 113, 0.4);
+  }
+}
