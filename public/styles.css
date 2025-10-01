@@ -168,6 +168,26 @@ input[type='text']:focus {
   color: #475467;
 }
 
+.manual-cadence-controls {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.manual-field {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.75rem 1rem;
+  border-radius: 14px;
+  background: rgba(79, 70, 229, 0.06);
+  border: 1px dashed rgba(79, 70, 229, 0.25);
+}
+
+.form-hint {
+  margin: 0;
+  color: #475467;
+  font-size: 0.9rem;
+}
+
 button {
   appearance: none;
   border: none;
@@ -197,6 +217,37 @@ button.secondary {
   background: rgba(79, 70, 229, 0.08);
   color: #4f46e5;
   padding: 0.55rem 1.1rem;
+}
+
+button.link-button {
+  background: none;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  color: #4f46e5;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  text-decoration: underline;
+  transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+button.link-button:hover {
+  color: #4338ca;
+  background: none;
+  box-shadow: none;
+  transform: none;
+}
+
+button.link-button:focus-visible {
+  outline: 2px solid #818cf8;
+  outline-offset: 2px;
+}
+
+button.link-button:disabled {
+  color: #9ca3af;
+  text-decoration: none;
+  cursor: not-allowed;
 }
 
 button.secondary:hover {
@@ -256,6 +307,13 @@ button.secondary:hover {
   margin: 0;
   color: #475467;
   font-size: 0.95rem;
+}
+
+.ritual-cadence {
+  margin: 0;
+  color: #1f2937;
+  font-size: 0.9rem;
+  font-weight: 600;
 }
 
 .ritual-run-meta {

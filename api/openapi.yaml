@@ -454,6 +454,7 @@ components:
         - ritual_key
         - name
         - instant_runs
+        - cadence
         - inputs
         - created_at
         - updated_at
@@ -467,6 +468,11 @@ components:
           example: Trash day pickup
         instant_runs:
           type: boolean
+        cadence:
+          type: string
+          nullable: true
+          description: Optional cadence phrase parsed from the intent helper.
+          example: Fridays 7am
         inputs:
           type: array
           items:
@@ -498,6 +504,11 @@ components:
           type: boolean
           description: Whether runs should be auto-started/auto-completed when created.
           default: false
+        cadence:
+          type: string
+          description: Optional cadence phrase parsed from the ritual intent.
+          nullable: true
+          example: Fridays 7am
         inputs:
           type: array
           description: Optional default inputs available to every run.

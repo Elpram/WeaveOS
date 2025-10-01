@@ -38,6 +38,24 @@
             <input id="instant-runs" name="instant" type="checkbox" checked />
             <span>Instant runs (auto-complete)</span>
           </label>
+          <div class="manual-cadence-controls">
+            <button id="toggle-manual-cadence" type="button" class="link-button" aria-expanded="false">
+              Add cadence manually
+            </button>
+          </div>
+          <div id="manual-cadence-container" class="manual-field" hidden>
+            <label class="input-group" for="manual-cadence">
+              <span class="input-label">Cadence (optional)</span>
+              <input
+                id="manual-cadence"
+                name="manual-cadence"
+                type="text"
+                placeholder="Fridays 7am"
+                autocomplete="off"
+              />
+            </label>
+            <p class="form-hint">We'll use this if we can't detect cadence from your sentence.</p>
+          </div>
           <button type="submit">Create ritual</button>
           <p id="form-feedback" class="form-feedback" role="status" aria-live="polite"></p>
         </form>

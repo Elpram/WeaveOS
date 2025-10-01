@@ -89,7 +89,8 @@
 
 ## Stretch (optional)
 
-- [ ] Parse cadence from free text (“Fridays 7am”) with a tiny helper; fallback to manual fields.
+- [x] Parse cadence from free text (“Fridays 7am”) with a tiny helper; fallback to manual fields. — tests: `npm test`, `npm run e2e:smoke`
+  - Completed: Added cadence parsing with manual fallback inputs and persisted cadence metadata through the API and UI.
 - [ ] Add “exception_shift holiday:local +1” mock (shift next run date for demo).
 
 ---

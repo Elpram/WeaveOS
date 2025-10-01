@@ -13,6 +13,7 @@ test('createRitualRecord stores a ritual with cloned inputs and timestamps', () 
       ritual_key: 'trash-day',
       name: 'Trash Day',
       instant_runs: true,
+      cadence: 'Fridays 7am',
       inputs,
     },
     () => new Date('2024-06-01T12:00:00.000Z'),
@@ -30,6 +31,7 @@ test('createRitualRecord stores a ritual with cloned inputs and timestamps', () 
     'https://city.local/trash',
     'mutating the original input should not affect the stored ritual',
   );
+  assert.equal(ritual.cadence, 'Fridays 7am');
   assert.deepEqual(ritual.runs, []);
 });
 
@@ -41,6 +43,7 @@ test('normalizeRitualForResponse returns deep copies of runs and inputs', () => 
       ritual_key: 'weekly-review',
       name: 'Weekly Review',
       instant_runs: false,
+      cadence: 'Mondays 8pm',
       inputs: [{ type: 'external_link', value: 'https://family.local/plan' }],
     },
     () => new Date('2024-06-02T09:00:00.000Z'),
@@ -57,6 +60,7 @@ test('normalizeRitualForResponse returns deep copies of runs and inputs', () => 
   assert.notStrictEqual(normalized, ritual);
   assert.notStrictEqual(normalized.inputs[0], ritual.inputs[0]);
   assert.notStrictEqual(normalized.runs[0], ritual.runs[0]);
+  assert.equal(normalized.cadence, 'Mondays 8pm');
 
   normalized.inputs[0].value = 'https://changed.local';
   normalized.runs[0].status = 'complete';

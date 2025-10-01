@@ -9,6 +9,7 @@
   const runSubtitle = document.getElementById('run-subtitle');
   const runStatusText = document.getElementById('run-status');
   const runRitual = document.getElementById('run-ritual');
+  const runCadence = document.getElementById('run-cadence');
   const runLastUpdate = document.getElementById('run-last-update');
   const runInputsList = document.getElementById('run-inputs');
   const runInputsEmpty = document.getElementById('run-inputs-empty');
@@ -20,6 +21,11 @@
   const activityEmpty = document.getElementById('activity-empty');
   const ritualNavLink = document.getElementById('ritual-nav-link');
   const toast = document.getElementById('toast');
+
+  const CADENCE_KEYWORDS =
+    '\\b(?:every|daily|weekly|monthly|quarterly|weekdays?|weekends?|mondays?|tuesdays?|wednesdays?|thursdays?|fridays?|saturdays?|sundays?|mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun|today|tonight|tomorrow|morning|afternoon|evening|night)\\b';
+
+  const cadencePattern = new RegExp(`${CADENCE_KEYWORDS}.*$`, 'i');
 
   const setToast = (message, tone = 'info') => {
     if (!toast) {
@@ -132,6 +138,32 @@
       : new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(timestampDate);
 
     return `${prefix} • ${labelName} • ${formattedDate}`;
+  };
+
+  const resolveCadence = (ritual) => {
+    if (!ritual) {
+      return null;
+    }
+
+    if (typeof ritual.cadence === 'string') {
+      const trimmedCadence = ritual.cadence.trim();
+      if (trimmedCadence.length > 0) {
+        return trimmedCadence;
+      }
+    }
+
+    const rawName = typeof ritual.name === 'string' ? ritual.name.trim() : '';
+    if (rawName.length === 0) {
+      return null;
+    }
+
+    const cadenceMatch = rawName.match(cadencePattern);
+    if (!cadenceMatch || cadenceMatch.index === undefined) {
+      return null;
+    }
+
+    const cadence = cadenceMatch[0].trim();
+    return cadence.length > 0 ? cadence : null;
   };
 
   const renderInputs = (inputs = []) => {
@@ -323,6 +355,11 @@
     renderTriggers(triggers);
     renderAttention(attentionItems);
     renderActivity(run.activity_log || []);
+
+    if (runCadence) {
+      const cadence = resolveCadence(ritual);
+      runCadence.textContent = cadence || 'On demand';
+    }
   };
 
   const loadRun = async () => {

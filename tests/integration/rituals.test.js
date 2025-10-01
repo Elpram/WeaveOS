@@ -61,6 +61,7 @@ test('instant rituals auto-complete runs immediately', async () => {
       ritual_key: 'trash-day',
       name: 'Trash day pickup',
       instant_runs: true,
+      cadence: 'Fridays 7am',
       inputs: [
         {
           type: 'external_link',
@@ -81,6 +82,7 @@ test('instant rituals auto-complete runs immediately', async () => {
     assert.equal(createPayload.ritual.ritual_key, ritualRequestBody.ritual_key);
     assert.equal(createPayload.ritual.name, ritualRequestBody.name);
     assert.equal(createPayload.ritual.instant_runs, ritualRequestBody.instant_runs);
+    assert.equal(createPayload.ritual.cadence, ritualRequestBody.cadence);
     assert.equal(createPayload.ritual.inputs.length, 1);
     assert.ok(isIsoDateString(createPayload.ritual.created_at));
     assert.ok(isIsoDateString(createPayload.ritual.updated_at));
@@ -91,11 +93,13 @@ test('instant rituals auto-complete runs immediately', async () => {
     const listPayload = await listResponse.json();
     assert.equal(listPayload.rituals.length, 1);
     assert.equal(listPayload.rituals[0].ritual_key, ritualRequestBody.ritual_key);
+    assert.equal(listPayload.rituals[0].cadence, ritualRequestBody.cadence);
 
     const getResponse = await fetch(`${baseUrl}/rituals/${ritualRequestBody.ritual_key}`);
     assert.equal(getResponse.status, 200);
     const getPayload = await getResponse.json();
     assert.equal(getPayload.ritual.ritual_key, ritualRequestBody.ritual_key);
+    assert.equal(getPayload.ritual.cadence, ritualRequestBody.cadence);
     assert.deepEqual(getPayload.ritual.runs, []);
 
     const runResponse = await fetch(`${baseUrl}/rituals/${ritualRequestBody.ritual_key}/runs`, {
@@ -127,6 +131,7 @@ test('instant rituals auto-complete runs immediately', async () => {
     assert.equal(ritualAfterRunPayload.ritual.runs[0].status, 'complete');
     assert.equal(ritualAfterRunPayload.ritual.runs[0].run_key, runPayload.run.run_key);
     assert.deepEqual(ritualAfterRunPayload.ritual.runs[0].inputs, ritualRequestBody.inputs);
+    assert.equal(ritualAfterRunPayload.ritual.cadence, ritualRequestBody.cadence);
   } finally {
     await close(server);
   }
@@ -150,6 +155,8 @@ test('non-instant rituals create planned runs', async () => {
     });
 
     assert.equal(createResponse.status, 201);
+    const createPayload = await createResponse.json();
+    assert.equal(createPayload.ritual.cadence, null);
 
     const runResponse = await fetch(`${baseUrl}/rituals/${ritualRequestBody.ritual_key}/runs`, {
       method: 'POST',

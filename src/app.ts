@@ -97,6 +97,7 @@ interface RitualRecord {
   ritual_key: string;
   name: string;
   instant_runs: boolean;
+  cadence: string | null;
   inputs: RitualInput[];
   created_at: string;
   updated_at: string;
@@ -268,6 +269,7 @@ const createRitualRecord = (
     ritual_key: string;
     name: string;
     instant_runs: boolean;
+    cadence?: string | null;
     inputs: RitualInput[];
   },
   now: NowFn = defaultNow,
@@ -278,6 +280,7 @@ const createRitualRecord = (
     ritual_key: data.ritual_key,
     name: data.name,
     instant_runs: data.instant_runs,
+    cadence: data.cadence ?? null,
     inputs: cloneInputs(data.inputs),
     created_at: timestamp,
     updated_at: timestamp,
@@ -365,11 +368,12 @@ const normalizeAttentionItem = (item: AttentionItem): AttentionItem => ({
 
 const normalizeRitualSummary = (ritual: RitualRecord): Pick<
   RitualRecord,
-  'ritual_key' | 'name' | 'instant_runs' | 'inputs' | 'created_at' | 'updated_at'
+  'ritual_key' | 'name' | 'instant_runs' | 'cadence' | 'inputs' | 'created_at' | 'updated_at'
 > => ({
   ritual_key: ritual.ritual_key,
   name: ritual.name,
   instant_runs: ritual.instant_runs,
+  cadence: ritual.cadence,
   inputs: cloneInputs(ritual.inputs),
   created_at: ritual.created_at,
   updated_at: ritual.updated_at,
@@ -461,6 +465,7 @@ const normalizeRitualForResponse = (ritual: RitualRecord): RitualRecord => ({
   ritual_key: ritual.ritual_key,
   name: ritual.name,
   instant_runs: ritual.instant_runs,
+  cadence: ritual.cadence,
   inputs: cloneInputs(ritual.inputs),
   created_at: ritual.created_at,
   updated_at: ritual.updated_at,
@@ -494,11 +499,13 @@ const handleCreateRitual = async (
     name,
     instant_runs: instantRuns = false,
     inputs = [],
+    cadence,
   } = payload as {
     ritual_key?: unknown;
     name?: unknown;
     instant_runs?: unknown;
     inputs?: unknown;
+    cadence?: unknown;
   };
 
   if (typeof ritualKey !== 'string' || ritualKey.trim().length === 0) {
@@ -519,6 +526,19 @@ const handleCreateRitual = async (
   if (!Array.isArray(inputs)) {
     sendJson(response, 400, { error: 'inputs_must_be_array' });
     return;
+  }
+
+  let normalizedCadence: string | null = null;
+  if (cadence !== undefined && cadence !== null) {
+    if (typeof cadence !== 'string') {
+      sendJson(response, 400, { error: 'cadence_must_be_string' });
+      return;
+    }
+
+    const trimmedCadence = cadence.trim();
+    if (trimmedCadence.length > 0) {
+      normalizedCadence = trimmedCadence;
+    }
   }
 
   if (state.rituals.has(ritualKey)) {
@@ -565,6 +585,7 @@ const handleCreateRitual = async (
     ritual_key: ritualKey,
     name,
     instant_runs: instantRuns,
+    cadence: normalizedCadence,
     inputs: normalizedInputs,
   });
 

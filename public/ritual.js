@@ -134,24 +134,27 @@
     }
   };
 
-  const extractNameAndCadence = (rawName) => {
-    if (typeof rawName !== 'string' || rawName.trim().length === 0) {
-      return { name: 'Untitled ritual', cadence: null };
+  const extractNameAndCadence = (ritual) => {
+    const rawName = ritual && typeof ritual.name === 'string' ? ritual.name : '';
+    const fallbackName = rawName.trim().length > 0 ? rawName.trim() : 'Untitled ritual';
+
+    const providedCadence = ritual && typeof ritual.cadence === 'string' ? ritual.cadence.trim() : '';
+    if (providedCadence.length > 0) {
+      return { name: fallbackName, cadence: providedCadence };
     }
 
-    const trimmed = rawName.trim();
-    const cadenceMatch = trimmed.match(cadencePattern);
+    const cadenceMatch = fallbackName.match(cadencePattern);
 
     if (!cadenceMatch || cadenceMatch.index === undefined) {
-      return { name: trimmed, cadence: null };
+      return { name: fallbackName, cadence: null };
     }
 
     const cadence = cadenceMatch[0].trim();
-    const name = trimmed.slice(0, cadenceMatch.index).trim();
+    const name = fallbackName.slice(0, cadenceMatch.index).trim();
 
     return {
-      name: name.length > 0 ? name : trimmed,
-      cadence,
+      name: name.length > 0 ? name : fallbackName,
+      cadence: cadence.length > 0 ? cadence : null,
     };
   };
 
@@ -268,7 +271,7 @@
   };
 
   const renderRitual = (ritual) => {
-    const { name: displayName, cadence } = extractNameAndCadence(ritual.name);
+    const { name: displayName, cadence } = extractNameAndCadence(ritual);
 
     nameEl.textContent = displayName;
     keyEl.textContent = `Ritual key: ${ritual.ritual_key}`;

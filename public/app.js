@@ -12,6 +12,14 @@
   const ritualCount = document.getElementById('ritual-count');
   const lastRefreshed = document.getElementById('last-refreshed');
   const attentionCount = document.getElementById('attention-count');
+  const manualCadenceToggle = document.getElementById('toggle-manual-cadence');
+  const manualCadenceContainer = document.getElementById('manual-cadence-container');
+  const manualCadenceInput = document.getElementById('manual-cadence');
+
+  const CADENCE_KEYWORDS =
+    '\\b(?:every|daily|weekly|monthly|quarterly|weekdays?|weekends?|mondays?|tuesdays?|wednesdays?|thursdays?|fridays?|saturdays?|sundays?|mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun|today|tonight|tomorrow|morning|afternoon|evening|night)\\b';
+
+  const cadencePattern = new RegExp(`${CADENCE_KEYWORDS}.*$`, 'i');
 
   const setFeedback = (message, isError = false) => {
     feedback.textContent = message;
@@ -26,11 +34,33 @@
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
 
+  const extractNameAndCadence = (value) => {
+    if (typeof value !== 'string' || value.trim().length === 0) {
+      return { name: '', cadence: null };
+    }
+
+    const trimmed = value.trim();
+    const cadenceMatch = trimmed.match(cadencePattern);
+
+    if (!cadenceMatch || cadenceMatch.index === undefined) {
+      return { name: trimmed, cadence: null };
+    }
+
+    const cadence = cadenceMatch[0].trim();
+    const name = trimmed.slice(0, cadenceMatch.index).trim();
+
+    return {
+      name: name.length > 0 ? name : trimmed,
+      cadence: cadence.length > 0 ? cadence : null,
+    };
+  };
+
   const parseIntent = (rawIntent) => {
     const trimmed = rawIntent.trim();
     const urlMatch = trimmed.match(/https?:\/\/\S+/);
     const link = urlMatch ? urlMatch[0] : null;
-    const name = link ? trimmed.replace(link, '').trim() : trimmed;
+    const withoutLink = link ? trimmed.replace(link, '').trim() : trimmed;
+    const { name, cadence } = extractNameAndCadence(withoutLink);
     const fallbackName = name.length > 0 ? name : 'Untitled ritual';
     const slug = slugify(fallbackName) || 'ritual';
     const uniqueSuffix = Date.now().toString(36);
@@ -39,9 +69,30 @@
     return {
       name: fallbackName,
       link,
+      cadence,
       ritualKey,
     };
   };
+
+  const setManualCadenceVisibility = (isVisible) => {
+    if (!manualCadenceContainer || !manualCadenceToggle) {
+      return;
+    }
+
+    manualCadenceContainer.hidden = !isVisible;
+    manualCadenceToggle.textContent = isVisible ? 'Hide manual cadence' : 'Add cadence manually';
+    manualCadenceToggle.setAttribute('aria-expanded', isVisible ? 'true' : 'false');
+  };
+
+  if (manualCadenceToggle) {
+    manualCadenceToggle.addEventListener('click', () => {
+      const nextVisibility = manualCadenceContainer ? manualCadenceContainer.hidden : true;
+      setManualCadenceVisibility(nextVisibility);
+      if (manualCadenceContainer && manualCadenceContainer.hidden && manualCadenceInput) {
+        manualCadenceInput.value = '';
+      }
+    });
+  }
 
   const toggleSubmitting = (isSubmitting) => {
     submitButton.disabled = isSubmitting;
@@ -222,6 +273,13 @@
         behaviour.textContent = describeRunBehaviour(ritual);
         card.appendChild(behaviour);
 
+        if (ritual.cadence) {
+          const cadenceEl = document.createElement('p');
+          cadenceEl.className = 'ritual-cadence';
+          cadenceEl.textContent = `Cadence • ${ritual.cadence}`;
+          card.appendChild(cadenceEl);
+        }
+
         const runMeta = document.createElement('p');
         runMeta.className = 'ritual-run-meta';
         runMeta.textContent = formatRunStatus(latestRun(ritual.runs));
@@ -335,7 +393,7 @@
       return;
     }
 
-    const { name, link, ritualKey } = parseIntent(rawIntent);
+    const { name, link, cadence: parsedCadence, ritualKey } = parseIntent(rawIntent);
     let linkLabel = null;
     if (link) {
       try {
@@ -344,6 +402,16 @@
       } catch (error) {
         linkLabel = 'Reference link';
       }
+    }
+
+    let cadence = parsedCadence;
+    const manualValue = manualCadenceInput ? manualCadenceInput.value.trim() : '';
+    if (!cadence && manualValue.length > 0) {
+      cadence = manualValue;
+    }
+
+    if (!cadence && !parsedCadence && manualCadenceContainer) {
+      setManualCadenceVisibility(true);
     }
 
     const payload = {
@@ -359,6 +427,7 @@
             },
           ]
         : [],
+      ...(cadence ? { cadence } : {}),
     };
 
     toggleSubmitting(true);
@@ -375,6 +444,12 @@
 
       setFeedback('Ritual created!');
       intentInput.value = '';
+      if (manualCadenceInput) {
+        manualCadenceInput.value = '';
+      }
+      if (manualCadenceContainer) {
+        setManualCadenceVisibility(false);
+      }
       await loadDashboard();
     } catch (error) {
       setFeedback(error.message || 'Unable to create ritual', true);
