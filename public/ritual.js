@@ -197,7 +197,12 @@
 
     sorted.slice(0, 5).forEach((run) => {
       const li = document.createElement('li');
-      li.className = 'run-item';
+      const link = document.createElement('a');
+      link.href = `/run.html?run=${encodeURIComponent(run.run_key)}`;
+      link.className = 'run-link';
+
+      const card = document.createElement('div');
+      card.className = 'run-item';
 
       const header = document.createElement('div');
       header.className = 'run-header';
@@ -212,14 +217,14 @@
       badge.textContent = statusLabel(run.status);
       header.appendChild(badge);
 
-      li.appendChild(header);
+      card.appendChild(header);
 
       const meta = document.createElement('p');
       meta.className = 'run-meta';
       meta.textContent = `${formatAbsoluteTimestamp(run.updated_at || run.created_at)} • ${formatRelativeTime(
         run.updated_at || run.created_at,
       )}`;
-      li.appendChild(meta);
+      card.appendChild(meta);
 
       if (Array.isArray(run.activity_log) && run.activity_log.length > 0) {
         const latestLog = run.activity_log[run.activity_log.length - 1];
@@ -227,10 +232,12 @@
           const activity = document.createElement('p');
           activity.className = 'run-activity';
           activity.textContent = latestLog.message;
-          li.appendChild(activity);
+          card.appendChild(activity);
         }
       }
 
+      link.appendChild(card);
+      li.appendChild(link);
       runsList.appendChild(li);
     });
   };

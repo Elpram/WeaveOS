@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Run • WeaveOS</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="detail-body">
+    <header class="page-header">
+      <nav class="page-nav">
+        <a class="back-link" href="/">← Back to dashboard</a>
+        <a id="ritual-nav-link" class="pill-link" href="#" hidden>View parent ritual</a>
+      </nav>
+      <div class="run-hero">
+        <div class="run-heading">
+          <p id="run-key" class="run-key-label">Loading run…</p>
+          <h1 id="run-title">Fetching run</h1>
+        </div>
+        <div class="run-hero-meta">
+          <span id="run-status-chip" class="status-chip">Loading</span>
+          <span id="run-updated" class="run-updated">—</span>
+        </div>
+      </div>
+      <p id="run-subtitle" class="run-subtitle">WeaveOS is gathering the latest activity.</p>
+    </header>
+    <main class="detail-layout">
+      <section class="card detail-card">
+        <div class="detail-card-header">
+          <h2>Run overview</h2>
+          <p class="detail-card-support">Status, ownership, and inherited inputs.</p>
+        </div>
+        <dl class="run-overview">
+          <div class="run-overview-row">
+            <dt>Status</dt>
+            <dd id="run-status">Loading…</dd>
+          </div>
+          <div class="run-overview-row">
+            <dt>Ritual</dt>
+            <dd id="run-ritual">—</dd>
+          </div>
+          <div class="run-overview-row">
+            <dt>Last update</dt>
+            <dd id="run-last-update">—</dd>
+          </div>
+        </dl>
+        <div class="run-inputs">
+          <h3 class="section-subtitle">Default inputs</h3>
+          <ul id="run-inputs" class="inputs-list"></ul>
+          <p id="run-inputs-empty" class="empty-state" hidden>No default inputs linked to this run.</p>
+        </div>
+      </section>
+      <section class="card detail-card">
+        <div class="detail-card-header">
+          <h2>Next triggers</h2>
+          <p class="detail-card-support">Mock timeline for upcoming agent actions.</p>
+        </div>
+        <ul id="triggers-list" class="trigger-list" role="list"></ul>
+        <p id="triggers-empty" class="empty-state" hidden>This run is wrapped up — no pending triggers.</p>
+      </section>
+      <section class="card detail-card">
+        <div class="detail-card-header">
+          <h2>Attention items</h2>
+          <p class="detail-card-support">Resolve blockers to keep agents moving.</p>
+        </div>
+        <ul id="attention-list" class="attention-list" role="list"></ul>
+        <p id="attention-empty" class="empty-state" hidden>All clear — no attention items.</p>
+      </section>
+      <section class="card detail-card">
+        <div class="detail-card-header">
+          <h2>Activity log</h2>
+          <p class="detail-card-support">Most recent events recorded by the agent.</p>
+        </div>
+        <ul id="activity-list" class="activity-list" role="list"></ul>
+        <p id="activity-empty" class="empty-state" hidden>No activity has been logged yet.</p>
+      </section>
+    </main>
+    <p id="toast" class="toast" role="status" aria-live="polite" hidden></p>
+    <script src="/run.js" defer></script>
+  </body>
+</html>

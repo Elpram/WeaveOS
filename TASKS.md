@@ -53,7 +53,8 @@
 - [x] **Ritual page**: show cadence, instant badge, default inputs, “Create run now” — tests: `npm test`, `npm run e2e:smoke`
   - Completed: Added dedicated ritual detail view with run kick-off flow and success toast for instant runs.
   - **AC:** Button creates a run; if instant, a toast shows “Run complete”.
-- [ ] **Run mini-hub**: show status, next triggers (mock), activity log, attention items
+- [x] **Run mini-hub**: show status, next triggers (mock), activity log, attention items — tests: `npm test`, `npm run e2e:smoke`
+  - Completed: Added run detail mini-hub page with mock trigger timeline, attention resolution, and activity feed.
   - **AC:** Attention item created via API is visible and can be resolved (mock).
 
 ## Phase 6 — Tests

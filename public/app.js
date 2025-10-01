@@ -274,8 +274,10 @@
       message.textContent = item.message;
       li.appendChild(message);
 
-      const context = document.createElement('span');
+      const context = document.createElement('a');
       const runLabel = formatRunKeyLabel(item.run_key, item.ritual_name);
+      context.href = `/run.html?run=${encodeURIComponent(item.run_key)}`;
+      context.className = 'attention-context';
       context.textContent = `${item.type.replace(/_/g, ' ')} • ${runLabel}`;
       li.appendChild(context);
 
