@@ -59,7 +59,8 @@
 
 ## Phase 6 — Tests
 
-- [ ] Unit tests for rituals, runs, attention items
+- [x] Unit tests for rituals, runs, attention items — tests: `npm test`, `npm run e2e:smoke`
+  - Completed: Added in-memory helpers and unit coverage for ritual creation, run lifecycle (including instant completion), and attention resolution logging.
   - **AC:** CRUD and instant run start/complete covered.
 - [ ] E2E smoke: create ritual → create run → request invocation URL → “done”
   - **AC:** Single command `npm run e2e:smoke` passes.
