@@ -74,7 +74,8 @@
 
 ## Phase 8 — Policies (MVP)
 
-- [ ] Hardcode household roles (Owner/Adult/Teen/Guest/Agent); allow only Owner to resolve “auth_needed”
+- [x] Hardcode household roles (Owner/Adult/Teen/Guest/Agent); allow only Owner to resolve “auth_needed” — tests: `npm test`, `npm run e2e:smoke`
+  - Completed: Added header-based role validation so only household Owners can resolve `auth_needed` attention items while documenting the policy in OpenAPI.
   - **AC:** Policy enforced in attention resolve endpoint; unit test proves it.
 
 ## Phase 9 — Quality: logs & idempotency

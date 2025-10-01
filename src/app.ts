@@ -99,6 +99,41 @@ interface AppState {
   automations: Map<string, Automation>;
 }
 
+const HOUSEHOLD_ROLES = ['Owner', 'Adult', 'Teen', 'Guest', 'Agent'] as const;
+type HouseholdRole = (typeof HOUSEHOLD_ROLES)[number];
+
+const getHouseholdRoleFromRequest = (
+  request: IncomingMessage,
+): { role?: HouseholdRole; error?: 'missing' | 'invalid' } => {
+  const rawHeader = request.headers['x-household-role'];
+
+  if (rawHeader === undefined) {
+    return { error: 'missing' };
+  }
+
+  const headerValue = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader;
+
+  if (typeof headerValue !== 'string') {
+    return { error: 'invalid' };
+  }
+
+  const normalizedValue = headerValue.trim();
+
+  if (normalizedValue.length === 0) {
+    return { error: 'invalid' };
+  }
+
+  const matchedRole = HOUSEHOLD_ROLES.find(
+    (role) => role.toLowerCase() === normalizedValue.toLowerCase(),
+  );
+
+  if (!matchedRole) {
+    return { error: 'invalid' };
+  }
+
+  return { role: matchedRole };
+};
+
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 
 const CONTENT_TYPES: Record<string, string> = {
@@ -760,6 +795,18 @@ const handleResolveAttention = async (
   response: ServerResponse,
   attentionId: string,
 ): Promise<void> => {
+  const { role, error: roleError } = getHouseholdRoleFromRequest(request);
+
+  if (roleError === 'missing') {
+    sendJson(response, 400, { error: 'household_role_required' });
+    return;
+  }
+
+  if (roleError === 'invalid' || !role) {
+    sendJson(response, 400, { error: 'invalid_household_role' });
+    return;
+  }
+
   const attentionItem = state.attentionItems.get(attentionId);
 
   if (!attentionItem) {
@@ -774,6 +821,11 @@ const handleResolveAttention = async (
 
   if (!state.runs.has(attentionItem.run_key)) {
     sendJson(response, 404, { error: 'run_not_found' });
+    return;
+  }
+
+  if (attentionItem.type === 'auth_needed' && role !== 'Owner') {
+    sendJson(response, 403, { error: 'forbidden_for_role' });
     return;
   }
 

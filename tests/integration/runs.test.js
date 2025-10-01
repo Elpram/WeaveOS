@@ -97,7 +97,7 @@ test('GET /runs/{run_id} returns run details with attention and triggers', async
 
     const resolveResponse = await fetch(`${baseUrl}/attention/${encodeURIComponent(attentionId)}/resolve`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', 'X-Household-Role': 'Owner' },
     });
     assert.equal(resolveResponse.status, 200);
 

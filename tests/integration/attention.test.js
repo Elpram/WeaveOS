@@ -252,6 +252,7 @@ describe('Attention Items API', () => {
 
       const resolveResponse = await fetch(`http://localhost:${port}/attention/${attentionId}/resolve`, {
         method: 'POST',
+        headers: { 'X-Household-Role': 'Owner' },
       });
 
       assert.strictEqual(resolveResponse.status, 200);
@@ -277,6 +278,65 @@ describe('Attention Items API', () => {
     }
   });
 
+  it('should forbid non-owners from resolving auth_needed attention items', async () => {
+    const server = createAppServer();
+    const port = await new Promise((resolve) => {
+      server.listen(0, () => {
+        const address = server.address();
+        resolve(address.port);
+      });
+    });
+
+    try {
+      const ritualResponse = await fetch(`http://localhost:${port}/rituals`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          ritual_key: 'policy-ritual',
+          name: 'Policy Ritual',
+          instant_runs: false,
+        }),
+      });
+
+      assert.strictEqual(ritualResponse.status, 201);
+
+      const runResponse = await fetch(`http://localhost:${port}/rituals/policy-ritual/runs`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+
+      assert.strictEqual(runResponse.status, 201);
+      const runData = await runResponse.json();
+      const runKey = runData.run.run_key;
+
+      const attentionResponse = await fetch(`http://localhost:${port}/attention`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          run_key: runKey,
+          type: 'auth_needed',
+          message: 'Needs owner action',
+        }),
+      });
+
+      assert.strictEqual(attentionResponse.status, 201);
+      const attentionData = await attentionResponse.json();
+      const attentionId = attentionData.attention.attention_id;
+
+      const resolveResponse = await fetch(`http://localhost:${port}/attention/${attentionId}/resolve`, {
+        method: 'POST',
+        headers: { 'X-Household-Role': 'Adult' },
+      });
+
+      assert.strictEqual(resolveResponse.status, 403);
+      const resolveData = await resolveResponse.json();
+      assert.strictEqual(resolveData.error, 'forbidden_for_role');
+    } finally {
+      server.close();
+    }
+  });
+
   it('should return 404 when resolving non-existent attention item', async () => {
     const server = createAppServer();
     const port = await new Promise((resolve) => {
@@ -289,6 +349,7 @@ describe('Attention Items API', () => {
     try {
       const response = await fetch(`http://localhost:${port}/attention/non-existent/resolve`, {
         method: 'POST',
+        headers: { 'X-Household-Role': 'Owner' },
       });
 
       assert.strictEqual(response.status, 404);
@@ -347,12 +408,14 @@ describe('Attention Items API', () => {
 
       const firstResolve = await fetch(`http://localhost:${port}/attention/${attentionId}/resolve`, {
         method: 'POST',
+        headers: { 'X-Household-Role': 'Owner' },
       });
 
       assert.strictEqual(firstResolve.status, 200);
 
       const secondResolve = await fetch(`http://localhost:${port}/attention/${attentionId}/resolve`, {
         method: 'POST',
+        headers: { 'X-Household-Role': 'Owner' },
       });
 
       assert.strictEqual(secondResolve.status, 409);
