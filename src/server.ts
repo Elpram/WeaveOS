@@ -1,4 +1,4 @@
-import { createAppServer } from './app';
+import { createAppServer, createConsoleLogger } from './app';
 
 const DEFAULT_PORT = 3000;
 const DEFAULT_HOST = '0.0.0.0';
@@ -6,18 +6,18 @@ const DEFAULT_HOST = '0.0.0.0';
 const port = Number.parseInt(process.env.PORT ?? `${DEFAULT_PORT}`, 10);
 const host = process.env.HOST ?? DEFAULT_HOST;
 
-const server = createAppServer();
+const logger = createConsoleLogger();
+const server = createAppServer({ logger });
 
 server.listen({ port, host }, () => {
-  console.log({
+  logger.info({
     event: 'server.start',
-    entity: 'server',
     status: 'listening',
     meta: { port, host },
   });
 });
 
 server.on('error', (error) => {
-  console.error({ event: 'server.start', entity: 'server', status: 'error', meta: { error } });
+  logger.error({ event: 'server.start', status: 'error', error });
   process.exit(1);
 });
