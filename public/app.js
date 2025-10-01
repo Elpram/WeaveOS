@@ -110,6 +110,34 @@
     }).format(date);
   };
 
+  const formatRunKeyLabel = (runKey, ritualName) => {
+    const prefix = 'Weave run';
+    const safeName = typeof ritualName === 'string' && ritualName.trim().length > 0 ? ritualName.trim() : null;
+
+    if (typeof runKey !== 'string' || runKey.trim().length === 0) {
+      return safeName ? `${prefix} • ${safeName}` : prefix;
+    }
+
+    const runKeyPattern = /^weave-run-(.+)-(\d{4}-\d{2}-\d{2}T.+)$/;
+    const match = runKey.trim().match(runKeyPattern);
+
+    if (!match) {
+      if (safeName) {
+        return `${prefix} • ${safeName} • ${runKey.trim()}`;
+      }
+      return `${prefix} • ${runKey.trim()}`;
+    }
+
+    const [, rawRitualKey, timestamp] = match;
+    const labelName = safeName || rawRitualKey.replace(/-/g, ' ').trim();
+    const timestampDate = new Date(timestamp);
+    const formattedDate = Number.isNaN(timestampDate.getTime())
+      ? timestamp
+      : new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(timestampDate);
+
+    return `${prefix} • ${labelName} • ${formattedDate}`;
+  };
+
   const describeRunBehaviour = (ritual) =>
     ritual.instant_runs
       ? 'Auto-completes the moment an agent triggers it.'
@@ -247,7 +275,8 @@
       li.appendChild(message);
 
       const context = document.createElement('span');
-      context.textContent = `${item.type.replace(/_/g, ' ')} • Run ${item.run_key} • ${item.ritual_name}`;
+      const runLabel = formatRunKeyLabel(item.run_key, item.ritual_name);
+      context.textContent = `${item.type.replace(/_/g, ' ')} • ${runLabel}`;
       li.appendChild(context);
 
       attentionList.appendChild(li);

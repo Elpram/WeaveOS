@@ -28,6 +28,21 @@ const isIsoDateString = (value) => {
   return Number.isFinite(parsed);
 };
 
+const isBrandedRunKey = (value, ritualKey) => {
+  if (typeof value !== 'string' || typeof ritualKey !== 'string') {
+    return false;
+  }
+
+  const prefix = `weave-run-${ritualKey}-`;
+  if (!value.startsWith(prefix)) {
+    return false;
+  }
+
+  const timestamp = value.slice(prefix.length);
+  const parsed = Date.parse(timestamp);
+  return Number.isFinite(parsed);
+};
+
 const startServer = async () => {
   const server = createAppServer();
   await listen(server, { port: 0, host: '127.0.0.1' });
@@ -93,7 +108,10 @@ test('instant rituals auto-complete runs immediately', async () => {
     const runPayload = await runResponse.json();
     assert.equal(runPayload.run.ritual_key, ritualRequestBody.ritual_key);
     assert.equal(runPayload.run.status, 'complete');
-    assert.ok(isIsoDateString(runPayload.run.run_key));
+    assert.ok(
+      isBrandedRunKey(runPayload.run.run_key, ritualRequestBody.ritual_key),
+      `run key should start with weave-run-${ritualRequestBody.ritual_key}- and include a parseable timestamp`,
+    );
     assert.ok(isIsoDateString(runPayload.run.created_at));
     assert.ok(isIsoDateString(runPayload.run.updated_at));
     assert.deepEqual(runPayload.run.inputs, ritualRequestBody.inputs);
@@ -142,7 +160,10 @@ test('non-instant rituals create planned runs', async () => {
     const runPayload = await runResponse.json();
     assert.equal(runPayload.run.status, 'planned');
     assert.equal(runPayload.run.ritual_key, ritualRequestBody.ritual_key);
-    assert.ok(isIsoDateString(runPayload.run.run_key));
+    assert.ok(
+      isBrandedRunKey(runPayload.run.run_key, ritualRequestBody.ritual_key),
+      `run key should start with weave-run-${ritualRequestBody.ritual_key}- and include a parseable timestamp`,
+    );
     assert.ok(isIsoDateString(runPayload.run.created_at));
     assert.ok(isIsoDateString(runPayload.run.updated_at));
     assert.equal(runPayload.run.created_at, runPayload.run.updated_at);

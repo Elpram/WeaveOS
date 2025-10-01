@@ -328,7 +328,10 @@ const handleGetRitual = (
   sendJson(response, 200, { ritual: normalizeRitualForResponse(ritual) });
 };
 
-const createRunKey = (): string => new Date().toISOString();
+const createRunKey = (ritualKey: string): string => {
+  const timestamp = new Date().toISOString();
+  return `weave-run-${ritualKey}-${timestamp}`;
+};
 
 const handleCreateRun = async (
   state: AppState,
@@ -367,7 +370,7 @@ const handleCreateRun = async (
     return;
   }
 
-  const runKey = providedRunKey ?? createRunKey();
+  const runKey = providedRunKey ?? createRunKey(ritual.ritual_key);
 
   if (state.runs.has(runKey)) {
     sendJson(response, 409, { error: 'run_already_exists' });
