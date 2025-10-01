@@ -96,6 +96,63 @@ describe('Automations API', () => {
     }
   });
 
+  it('should reuse automation creation when the same idempotency key is provided', async () => {
+    const server = createAppServer();
+    const port = await new Promise((resolve) => {
+      server.listen(0, () => {
+        const address = server.address();
+        resolve(address.port);
+      });
+    });
+
+    try {
+      const automationRequest = {
+        trigger: 'on_run_complete',
+        call: {
+          capability_id: 'notify.send',
+          payload_template: {
+            message: 'Run completed',
+          },
+        },
+      };
+
+      const idempotencyKey = 'auto-idem-123';
+
+      const firstResponse = await fetch(`http://localhost:${port}/automations`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'Idempotency-Key': idempotencyKey,
+        },
+        body: JSON.stringify(automationRequest),
+      });
+
+      assert.strictEqual(firstResponse.status, 201);
+      const firstPayload = await firstResponse.json();
+      assert.ok(firstPayload.automation);
+
+      const secondResponse = await fetch(`http://localhost:${port}/automations`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'Idempotency-Key': idempotencyKey,
+        },
+        body: JSON.stringify(automationRequest),
+      });
+
+      assert.strictEqual(secondResponse.status, 201);
+      const secondPayload = await secondResponse.json();
+
+      assert.strictEqual(
+        secondPayload.automation.automation_id,
+        firstPayload.automation.automation_id,
+      );
+      assert.deepStrictEqual(secondPayload.automation.call, firstPayload.automation.call);
+    } finally {
+      server.close();
+    }
+  });
+
   it('should return 404 for non-existent ritual', async () => {
     const server = createAppServer();
     const port = await new Promise((resolve) => {
