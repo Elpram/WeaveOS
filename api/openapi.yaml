@@ -152,6 +152,10 @@ paths:
       responses:
         '501':
           description: Not implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /artifacts:
     post:
       summary: Create artifact
@@ -161,6 +165,10 @@ paths:
       responses:
         '501':
           description: Not implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /attention:
     post:
       summary: Create attention item
