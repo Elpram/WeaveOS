@@ -14,6 +14,12 @@ body {
     linear-gradient(180deg, #f9fafb 0%, #eff4ff 60%, #f8f9fb 100%);
 }
 
+.detail-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
 .app-header {
   padding: 3rem 1.5rem 1.5rem;
   text-align: center;
@@ -52,6 +58,30 @@ body {
   padding: 0 1.5rem 3.5rem;
   max-width: 1100px;
   margin: 0 auto;
+}
+
+.detail-layout {
+  display: grid;
+  gap: 1.5rem;
+  padding: 0 1.5rem 3.5rem;
+  width: min(960px, 100%);
+  margin: 0 auto 3rem;
+}
+
+.detail-card {
+  display: grid;
+  gap: 1rem;
+}
+
+.detail-card-header {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.detail-card-support {
+  margin: 0;
+  color: #475467;
+  font-size: 0.95rem;
 }
 
 @media (min-width: 960px) {
@@ -278,6 +308,188 @@ button.secondary:hover {
   text-decoration: underline;
 }
 
+.page-header {
+  padding: 2.5rem 1.5rem 1.5rem;
+  display: grid;
+  gap: 1.25rem;
+  text-align: left;
+}
+
+.page-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.back-link {
+  color: #4f46e5;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.back-link:hover {
+  text-decoration: underline;
+}
+
+.ritual-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.ritual-heading {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.ritual-heading h1 {
+  margin: 0;
+  font-size: clamp(2rem, 5vw, 2.75rem);
+}
+
+.ritual-key {
+  margin: 0;
+  color: #6366f1;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.ritual-subtitle {
+  margin: 0;
+  color: #475467;
+}
+
+.ritual-meta {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.12);
+  color: #3730a3;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.runs-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.run-item {
+  border: 1px solid rgba(79, 70, 229, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 1rem 1.25rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.run-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.run-key {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #1f2937;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: rgba(59, 130, 246, 0.16);
+  color: #1d4ed8;
+}
+
+.status-chip.status-complete {
+  background: rgba(34, 197, 94, 0.18);
+  color: #15803d;
+}
+
+.status-chip.status-planned {
+  background: rgba(249, 115, 22, 0.16);
+  color: #c2410c;
+}
+
+.status-chip.status-in_progress {
+  background: rgba(59, 130, 246, 0.16);
+  color: #1d4ed8;
+}
+
+.run-meta {
+  margin: 0;
+  color: #475467;
+  font-size: 0.9rem;
+}
+
+.run-activity {
+  margin: 0;
+  color: #4f46e5;
+  font-size: 0.9rem;
+}
+
+.toast {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  padding: 0.8rem 1.2rem;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.9);
+  color: #f8fafc;
+  font-weight: 600;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.3);
+  transition: opacity 0.3s ease;
+}
+
+.toast.success {
+  background: rgba(34, 197, 94, 0.95);
+}
+
+.toast.error {
+  background: rgba(220, 38, 38, 0.95);
+}
+
+.toast.info {
+  background: rgba(59, 130, 246, 0.95);
+}
+
+.toast[hidden] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ritual-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.ritual-link:focus .ritual-item,
+.ritual-link:hover .ritual-item {
+  border-color: rgba(79, 70, 229, 0.45);
+  box-shadow: 0 16px 28px rgba(79, 70, 229, 0.2);
+}
+
 .attention-item {
   border-radius: 16px;
   border: 1px solid rgba(220, 38, 38, 0.2);
@@ -322,6 +534,19 @@ button.secondary:hover {
     border: 1px solid rgba(99, 102, 241, 0.2);
   }
 
+  .detail-card-support,
+  .ritual-subtitle {
+    color: #cbd5f5;
+  }
+
+  .ritual-key {
+    color: #a5b4fc;
+  }
+
+  .back-link {
+    color: #a5b4fc;
+  }
+
   .input-label {
     color: #e2e8f0;
   }
@@ -342,9 +567,51 @@ button.secondary:hover {
     color: #fcd34d;
   }
 
+  .chip {
+    background: rgba(129, 140, 248, 0.25);
+    color: #e0e7ff;
+  }
+
   .inputs-list li {
     background: rgba(99, 102, 241, 0.25);
     color: #c7d2fe;
+  }
+
+  .run-item {
+    background: rgba(30, 41, 59, 0.8);
+    border-color: rgba(99, 102, 241, 0.3);
+  }
+
+  .run-key {
+    color: #e2e8f0;
+  }
+
+  .run-meta {
+    color: #cbd5f5;
+  }
+
+  .run-activity {
+    color: #a5b4fc;
+  }
+
+  .status-chip {
+    background: rgba(59, 130, 246, 0.35);
+    color: #bfdbfe;
+  }
+
+  .status-chip.status-complete {
+    background: rgba(34, 197, 94, 0.35);
+    color: #bbf7d0;
+  }
+
+  .status-chip.status-planned {
+    background: rgba(249, 115, 22, 0.35);
+    color: #fed7aa;
+  }
+
+  .status-chip.status-in_progress {
+    background: rgba(59, 130, 246, 0.35);
+    color: #bfdbfe;
   }
 
   .attention-item {

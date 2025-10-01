@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ritual • WeaveOS</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="detail-body">
+    <header class="page-header">
+      <nav class="page-nav">
+        <a class="back-link" href="/">← Back to dashboard</a>
+      </nav>
+      <div class="ritual-hero">
+        <div class="ritual-heading">
+          <p class="ritual-key" id="ritual-key">Loading ritual…</p>
+          <h1 id="ritual-name">Loading…</h1>
+        </div>
+        <div class="ritual-meta">
+          <span id="instant-badge" class="badge" hidden>Instant ritual</span>
+          <span id="manual-badge" class="badge inactive" hidden>Manual wrap-up</span>
+          <span id="cadence-chip" class="chip" hidden></span>
+        </div>
+      </div>
+      <p class="ritual-subtitle" id="ritual-subtitle">WeaveOS is fetching the latest run state.</p>
+    </header>
+    <main class="detail-layout">
+      <section class="card detail-card">
+        <div class="detail-card-header">
+          <h2>Kick off a run</h2>
+          <p id="run-behaviour" class="detail-card-support">Agents will stage the run for you.</p>
+        </div>
+        <button id="create-run" type="button">Create run now</button>
+      </section>
+      <section class="card detail-card">
+        <div class="detail-card-header">
+          <h2>Reference links</h2>
+          <p class="detail-card-support">These travel with every run by default.</p>
+        </div>
+        <ul id="inputs-list" class="inputs-list"></ul>
+        <p id="inputs-empty" class="empty-state">No saved links yet. Add one when creating the ritual intent.</p>
+      </section>
+      <section class="card detail-card">
+        <div class="detail-card-header">
+          <h2>Recent runs</h2>
+          <p class="detail-card-support">Latest five runs with status updates.</p>
+        </div>
+        <ul id="runs-list" class="runs-list" role="list"></ul>
+        <p id="runs-empty" class="empty-state">No runs yet. Kick one off to see it here.</p>
+      </section>
+    </main>
+    <p id="toast" class="toast" role="status" aria-live="polite" hidden></p>
+    <script src="/ritual.js" defer></script>
+  </body>
+</html>

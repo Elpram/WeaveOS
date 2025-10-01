@@ -167,8 +167,13 @@
     rituals
       .sort((a, b) => a.name.localeCompare(b.name))
       .forEach((ritual) => {
-        const item = document.createElement('li');
-        item.className = 'ritual-item';
+        const listItem = document.createElement('li');
+        const link = document.createElement('a');
+        link.className = 'ritual-link';
+        link.href = `/ritual.html?ritual=${encodeURIComponent(ritual.ritual_key)}`;
+
+        const card = document.createElement('div');
+        card.className = 'ritual-item';
 
         const header = document.createElement('div');
         header.className = 'ritual-header';
@@ -182,17 +187,17 @@
         badge.textContent = ritual.instant_runs ? 'Auto-completes' : 'Needs wrap-up';
         header.appendChild(badge);
 
-        item.appendChild(header);
+        card.appendChild(header);
 
         const behaviour = document.createElement('p');
         behaviour.className = 'ritual-behaviour';
         behaviour.textContent = describeRunBehaviour(ritual);
-        item.appendChild(behaviour);
+        card.appendChild(behaviour);
 
         const runMeta = document.createElement('p');
         runMeta.className = 'ritual-run-meta';
         runMeta.textContent = formatRunStatus(latestRun(ritual.runs));
-        item.appendChild(runMeta);
+        card.appendChild(runMeta);
 
         if (ritual.inputs && ritual.inputs.length > 0) {
           const inputList = document.createElement('ul');
@@ -213,10 +218,12 @@
             inputList.appendChild(li);
           });
 
-          item.appendChild(inputList);
+          card.appendChild(inputList);
         }
 
-        upcomingList.appendChild(item);
+        link.appendChild(card);
+        listItem.appendChild(link);
+        upcomingList.appendChild(listItem);
       });
   };
 
