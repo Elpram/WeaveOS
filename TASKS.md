@@ -83,7 +83,8 @@
 - [x] Add idempotency keys to automation calls (mock) and attention resolves — tests: `npm test`, `npm run e2e:smoke`
   - Completed: Added header-based idempotency caching for automation registration and attention resolution responses.
   - **AC:** Replaying the same request is safe (no dupes).
-- [ ] Structured logs
+- [x] Structured logs
+  - Completed: Added shared logger emitting structured run and attention lifecycle events with run/ritual context. — tests: `npm test`, `npm run e2e:smoke`
   - **AC:** Logs include `{event, run_id, ritual_id?, status}`.
 
 ## Stretch (optional)

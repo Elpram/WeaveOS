@@ -2,8 +2,25 @@ import { createServer, IncomingMessage, Server, ServerResponse } from 'node:http
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
+export interface LogEntry {
+  event: string;
+  status?: string;
+  run_id?: string;
+  ritual_id?: string;
+  meta?: Record<string, unknown>;
+}
+
+export interface ErrorLogEntry extends LogEntry {
+  error?: unknown;
+}
+
+export interface Logger {
+  info(entry: LogEntry): void;
+  error(entry: ErrorLogEntry): void;
+}
+
 export interface AppOptions {
-  logger?: boolean;
+  logger?: Logger;
 }
 
 type RunStatus = 'planned' | 'in_progress' | 'complete';
@@ -98,6 +115,7 @@ interface AppState {
   attentionItems: Map<string, AttentionItem>;
   automations: Map<string, Automation>;
   idempotencyRecords: Map<string, IdempotencyRecord>;
+  logger: Logger;
 }
 
 interface IdempotencyRecord {
@@ -141,6 +159,37 @@ const getHouseholdRoleFromRequest = (
 };
 
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
+
+const formatErrorForLog = (error: unknown): unknown => {
+  if (error instanceof Error) {
+    return { message: error.message, stack: error.stack };
+  }
+
+  return error;
+};
+
+export const createConsoleLogger = (): Logger => ({
+  info: (entry) => {
+    console.log(entry);
+  },
+  error: (entry) => {
+    if (entry.error !== undefined) {
+      const { error, ...rest } = entry;
+      console.error({ ...rest, error: formatErrorForLog(error) });
+      return;
+    }
+
+    console.error(entry);
+  },
+});
+
+const defaultLogger = createConsoleLogger();
+
+const hasResponseEnded = (response: ServerResponse): boolean =>
+  (response as unknown as { writableEnded?: boolean }).writableEnded === true;
+
+const hasResponseStarted = (response: ServerResponse): boolean =>
+  (response as unknown as { headersSent?: boolean }).headersSent === true;
 
 const CONTENT_TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -197,12 +246,13 @@ const tryServeStaticAsset = async (
   }
 };
 
-const createInitialState = (): AppState => ({
+const createInitialState = (logger: Logger = defaultLogger): AppState => ({
   rituals: new Map(),
   runs: new Map(),
   attentionItems: new Map(),
   automations: new Map(),
   idempotencyRecords: new Map(),
+  logger,
 });
 
 type NowFn = () => Date;
@@ -235,6 +285,16 @@ const createRitualRecord = (
   };
 
   state.rituals.set(ritual.ritual_key, ritual);
+
+  state.logger.info({
+    event: 'ritual.created',
+    ritual_id: ritual.ritual_key,
+    status: 'active',
+    meta: {
+      name: ritual.name,
+      instant_runs: ritual.instant_runs,
+    },
+  });
 
   return ritual;
 };
@@ -581,6 +641,22 @@ const createRunRecord = (
   ritual.updated_at = run.updated_at;
   state.runs.set(runKey, run);
 
+  const runMeta: Record<string, unknown> = {
+    instant_run: ritual.instant_runs,
+  };
+
+  if (ritual.instant_runs && run.status === 'complete') {
+    runMeta.completed_immediately = true;
+  }
+
+  state.logger.info({
+    event: 'run.created',
+    run_id: run.run_key,
+    ritual_id: run.ritual_key,
+    status: run.status,
+    meta: runMeta,
+  });
+
   return run;
 };
 
@@ -710,6 +786,17 @@ const createAttentionItemRecord = (
 
   state.attentionItems.set(attentionId, attentionItem);
 
+  state.logger.info({
+    event: 'attention.created',
+    run_id: run.run_key,
+    ritual_id: run.ritual_key,
+    status: run.status,
+    meta: {
+      attention_id: attentionItem.attention_id,
+      attention_type: attentionItem.type,
+    },
+  });
+
   return attentionItem;
 };
 
@@ -742,6 +829,18 @@ const resolveAttentionItemRecord = (
   });
 
   run.updated_at = timestamp;
+
+  state.logger.info({
+    event: 'attention.resolved',
+    run_id: run.run_key,
+    ritual_id: run.ritual_key,
+    status: run.status,
+    meta: {
+      attention_id: attentionItem.attention_id,
+      attention_type: attentionItem.type,
+      resolved_at: attentionItem.resolved_at,
+    },
+  });
 
   return attentionItem;
 };
@@ -1016,6 +1115,18 @@ const handleCreateAutomation = async (
 
   state.automations.set(automation.automation_id, automation);
 
+  state.logger.info({
+    event: 'automation.registered',
+    status: 'ready',
+    ...(ritualKey ? { ritual_id: ritualKey } : {}),
+    meta: {
+      automation_id: automation.automation_id,
+      trigger: automation.trigger,
+      has_target: Boolean(targetId),
+      has_connection: Boolean(connectionId),
+    },
+  });
+
   const responsePayload = {
     automation: {
       ...automation,
@@ -1039,7 +1150,7 @@ const createInvocationId = (): string => `inv_${Date.now()}_${Math.random().toSt
 const createIdempotencyKey = (): string => `idem_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
 const handleRequestInvocation = async (
-  _state: AppState,
+  state: AppState,
   request: IncomingMessage,
   response: ServerResponse,
 ): Promise<void> => {
@@ -1081,6 +1192,16 @@ const handleRequestInvocation = async (
   const invocationId = createInvocationId();
   const idempotencyKey = createIdempotencyKey();
   const mockInvocationUrl = `https://api.example.com/v1/invocations/${invocationId}`;
+
+  state.logger.info({
+    event: 'invocation.requested',
+    status: 'pending',
+    meta: {
+      invocation_id: invocationId,
+      capability_id: capabilityId,
+      idempotency_key: idempotencyKey,
+    },
+  });
 
   sendJson(response, 200, {
     invocation_id: invocationId,
@@ -1231,13 +1352,29 @@ export const __testing = {
   buildNextTriggers,
 };
 
-export const createAppServer = (_options: AppOptions = {}): Server => {
-  const state = createInitialState();
+export const createAppServer = (options: AppOptions = {}): Server => {
+  const logger = options.logger ?? defaultLogger;
+  const state = createInitialState(logger);
 
   const server = createServer(async (request, response) => {
     try {
       await handleRequest(state, request, response);
-    } catch (_error) {
+    } catch (error) {
+      logger.error({
+        event: 'request.unhandled_error',
+        status: 'error',
+        error,
+      });
+
+      if (hasResponseEnded(response)) {
+        return;
+      }
+
+      if (hasResponseStarted(response)) {
+        response.end();
+        return;
+      }
+
       sendJson(response, 500, { status: 'error' });
     }
   });
